@@ -1,0 +1,8 @@
+{
+  "name": "ReportMaster OM",
+  "description": "Aplicativo para elaboração de relatórios de atividade offline com suporte a fotos e exportação em PDF.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
