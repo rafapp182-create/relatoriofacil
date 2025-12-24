@@ -31,7 +31,8 @@ import {
   FileText,
   Calendar,
   Zap,
-  UserPlus
+  UserPlus,
+  MessageCircle
 } from 'lucide-react';
 import { storage } from './services/storage';
 import { Report, Shift, ReportType, ReportPhoto, WorkCenter } from './types';
@@ -511,6 +512,44 @@ const ReportFormPage = () => {
     }
   };
 
+  const shareViaWhatsApp = () => {
+    const message = `RELATÓRIO DE EXECUÇÃO
+AUTOMAÇÃO MINA SERRA SUL
+
+🗓️ Data: ${formData.date ? new Date(formData.date).toLocaleDateString('pt-BR') : ''}
+🚜 Equipamento: ${formData.equipment || ''}
+📌 Local: ${formData.local || ''}
+
+📂 N° OM: ${formData.omNumber || ''}
+
+🛠️ Tipo de Atividade: ${formData.activityType?.toUpperCase() || ''}
+
+⏰ Horário Inicial: ${formData.startTime || ''}
+⏰ Horario final: ${formData.endTime || ''}
+🛑 Desvio IAMO: ${formData.iamoDeviation ? 'SIM (' + (formData.iamoDescription || '') + ')' : 'NÃO'}
+
+♻️ Descrição da OM: ${formData.omDescription || ''}
+
+📈 Atividades executada: ${formData.activityExecuted || ''}
+
+🎯 OM finalizada: ${formData.isFinished ? 'SIM' : 'NÃO'}
+🔔 Pendências: ${formData.hasPendencies ? 'SIM (' + (formData.pendencyDescription || '') + ')' : 'NÃO'}
+📈 Equipe turno: ${formData.teamShift || ''}
+🔖 Centro de Trabalho: ${formData.workCenter || ''}
+👥 Técnicos: ${formData.technicians || ''}`;
+
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
+    
+    const link = document.createElement('a');
+    link.href = whatsappUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const generatePDF = () => {
     const doc = new jsPDF();
     const margin = 15;
@@ -702,7 +741,7 @@ const ReportFormPage = () => {
 
               <div className={`flex flex-col gap-1 ${isNew ? 'opacity-60' : ''}`}>
                 <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🛠️ Tipo</label>
-                <select disabled={isNew} value={formData.activityType} onChange={e => setFormData(p => ({...p, activityType: e.target.value as any}))} className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-dark-border bg-white dark:bg-dark-card dark:text-white text-sm font-bold outline-none focus:ring-2 focus:ring-blue-100">
+                <select disabled={isNew} value={formData.activityType} onChange={e => setFormData(p => ({...p, activityType: e.target.value as any}))} className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-dark-border bg-white dark:bg-dark-card dark:text-white text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-blue-100">
                   <option value="preventiva">Preventiva</option>
                   <option value="corretiva">Corretiva</option>
                 </select>
@@ -884,8 +923,12 @@ const ReportFormPage = () => {
           {/* Opções de Exportação */}
           {formData.type === 'report' && (
             <div className="grid grid-cols-2 gap-3 pt-4 border-t dark:border-dark-border">
-              <Button onClick={generatePDF} variant="secondary" className="h-12 text-xs uppercase tracking-widest"><Download className="w-4 h-4" /> PDF</Button>
-              <Button onClick={() => navigator.share && navigator.share({title: `Relatório OM ${formData.omNumber}`})} variant="secondary" className="h-12 text-xs uppercase tracking-widest"><Share2 className="w-4 h-4" /> Enviar</Button>
+              <Button onClick={generatePDF} variant="secondary" className="h-12 text-xs uppercase tracking-widest col-span-2 shadow-sm">
+                <Download className="w-4 h-4" /> Exportar PDF Completo
+              </Button>
+              <Button onClick={shareViaWhatsApp} variant="success" className="h-14 text-sm uppercase font-black col-span-2 shadow-emerald-100/50">
+                <MessageCircle className="w-5 h-5" /> Enviar Tudo via WhatsApp
+              </Button>
             </div>
           )}
         </div>
