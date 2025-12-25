@@ -32,7 +32,9 @@ import {
   Calendar,
   Zap,
   UserPlus,
-  MessageCircle
+  MessageCircle,
+  Play,
+  Save
 } from 'lucide-react';
 import { storage } from './services/storage';
 import { Report, Shift, ReportType, ReportPhoto, WorkCenter } from './types';
@@ -51,6 +53,150 @@ const useTheme = () => {
   return context;
 };
 
+// --- Modelos de Início de Turno Padrão ---
+const DEFAULT_SHIFT_TEMPLATES = {
+  'A': `📣 Evento: Boa Jornada ✅  
+📋 Tema: Atividades relacionadas ao turno.
+📍 Local: Contêiner Automação de Mina
+🗓 Data: {{date}}
+⛑ Palestrantes: Todos
+📈 Realizado o DSS com equipe do Turno D
+🗣️ Participantes Equipe SONDA/SOTREQ/HEXAGON/CREARE
+
+Boa dia pessoal, estamos assumindo as demandas do Turno A.
+Bom descanso para o turno B.
+
+Vale: 
+Ilton
+
+Equipe Sonda:
+Truckulles 
+Hannyel 
+Misael
+
+Móveis 
+Eduardo 
+Marcos 
+
+Sotreq: 
+Diran 
+
+Hexagon:
+Alcino
+
+Creare:
+Assuero
+
+Alcon:
+Kesia`,
+  'B': `📣 Evento: Boa Jornada ✅  
+📋 Tema: Atividades relacionadas ao turno.
+📍 Local: Contêiner Automação de Mina
+🗓 Data: {{date}}
+⛑ Palestrantes: Todos
+📈 Realizado o DSS com equipe do turno B
+🗣️ Participantes Equipe SONDA/SOTREQ/HEXAGON/ALCON/CREARE
+
+Boa noite pessoal, estamos assumindo as atividades do Turno B, ao Turno A bom descanso!!!
+
+Equipes Mobilizadas. 
+
+SONDA
+
+EQ. Fixos
+Luiz Gustavo 
+Rafael
+
+EQ. Móveis
+Jeferson 
+Geneilsom 
+
+Sotreq
+Mauro 
+
+Hexagon
+Luiz Neto
+
+Creare
+Vitor
+
+Vale
+Alessandra`,
+  'C': `📣 Evento: Boa Jornada ✅  
+📋 Tema: Atividades relacionadas ao turno.
+📍 Local: Contêiner Automação de Mina
+🗓 Data: {{date}}
+⛑ Palestrantes: Todos
+📈 Realizado o DSS com equipe do Turno C
+🗣️ Participantes Equipe SONDA/SOTREQ/HEXAGON/VALE/CREARE
+
+Bom dia pessoal, estamos assumindo as atividades do Turno C, ao Turno D bom descanso!!
+
+* Equipes Mobilizadas
+
+* SONDA
+
+* Téc. Controle
+* Camila ADM
+
+* Eq. Truckless
+* Marcos
+* Wanderson  
+
+* Eq. Móveis
+* Wilian 
+* Gustavo  
+
+* Sotreq
+* Joao leno
+
+* Hexagon
+* Patrick 
+* Jhon Dultra 
+
+* Alcon
+* Fabricio 
+
+* Creare
+* Victor  
+
+* Vale
+* Daniel Alves`,
+  'D': `📣 Evento: Boa Jornada ✅  
+📋 Tema: Atividades relacionadas ao turno.
+📍 Local: Contêiner Automação de Mina
+🗓 Data: {{date}}
+⛑ Palestrantes: Todos
+📈 Realizado o DSS com equipe do Turno D
+🗣️ Participantes Equipe SONDA/SOTREQ/HEXAGON/CREARE
+
+Boa noite galera, estamos assumindo as atividades do Turno D, ao Turno C bom descanso!!
+
+Equipes Mobilizadas
+
+SONDA
+
+EQ. Fixos
+Doclenio
+Geraldo
+
+EQ. Móveis
+Darlan
+Cícero 
+
+Sotreq
+Thiago
+
+Hexagon
+Rodrigo
+
+Creare
+Hitalo
+
+Vale
+Renato`
+};
+
 // --- Utilitários ---
 const stripSpecialChars = (text: string) => {
   if (!text) return "";
@@ -59,6 +205,18 @@ const stripSpecialChars = (text: string) => {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^\x20-\x7E\s]/g, "")
     .trim();
+};
+
+const sendToWhatsApp = (message: string) => {
+  const encodedMessage = encodeURIComponent(message);
+  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
+  const link = document.createElement('a');
+  link.href = whatsappUrl;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 
 // --- Componentes de UI ---
@@ -163,10 +321,10 @@ const Button: React.FC<{
   const base = "px-4 py-2 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:active:scale-100";
   const variants = {
     primary: "bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-none",
-    secondary: "bg-slate-200 dark:bg-dark-card text-black dark:text-white",
+    secondary: "bg-slate-200 dark:bg-dark-card text-slate-800 dark:text-white",
     success: "bg-emerald-500 text-white shadow-md shadow-emerald-200 dark:shadow-none",
     danger: "bg-rose-500 text-white shadow-md shadow-rose-200 dark:shadow-none",
-    ghost: "bg-transparent text-black dark:text-white"
+    ghost: "bg-transparent text-slate-800 dark:text-white"
   };
 
   return (
@@ -199,7 +357,7 @@ const CompactInput: React.FC<{
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         placeholder={placeholder}
-        className={`w-full ${icon ? 'pl-9' : 'px-3'} py-2.5 rounded-xl border bg-white dark:bg-dark-card ${error ? 'border-rose-400 ring-1 ring-rose-100' : 'border-slate-300 dark:border-dark-border'} focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all text-sm font-semibold text-black dark:text-white shadow-sm placeholder:text-slate-400 disabled:bg-slate-100`}
+        className={`w-full ${icon ? 'pl-9' : 'px-3'} py-2.5 rounded-xl border bg-white dark:bg-dark-card ${error ? 'border-rose-400 ring-1 ring-rose-100' : 'border-slate-300 dark:border-dark-border'} focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all text-sm font-semibold text-slate-800 dark:text-white shadow-sm placeholder:text-slate-400 disabled:bg-slate-100`}
       />
     </div>
   </div>
@@ -225,7 +383,7 @@ const CompactTextArea: React.FC<{
       placeholder={placeholder}
       rows={rows}
       disabled={disabled}
-      className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-dark-card ${error ? 'border-rose-400 ring-1 ring-rose-100' : 'border-slate-300 dark:border-dark-border'} focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all text-sm font-semibold text-black dark:text-white resize-none shadow-sm placeholder:text-slate-400 disabled:bg-slate-100`}
+      className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-dark-card ${error ? 'border-rose-400 ring-1 ring-rose-100' : 'border-slate-300 dark:border-dark-border'} focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all text-sm font-semibold text-slate-800 dark:text-white resize-none shadow-sm placeholder:text-slate-400 disabled:bg-slate-100`}
     />
   </div>
 );
@@ -314,6 +472,11 @@ const HomePage = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [activeTab, setActiveTab] = useState<ReportType>('template');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  
+  // Modelos de Início de Turno Editáveis
+  const [shiftTemplates, setShiftTemplates] = useState<Record<string, string>>(DEFAULT_SHIFT_TEMPLATES);
+  const [editingShift, setEditingShift] = useState<string | null>(null);
+  const [tempTemplate, setTempTemplate] = useState("");
 
   useEffect(() => {
     const state = location.state as { tab?: ReportType } | null;
@@ -323,6 +486,11 @@ const HomePage = () => {
   useEffect(() => {
     const allReports = storage.getReports();
     setReports(allReports.sort((a, b) => b.updatedAt - a.updatedAt));
+    
+    const savedTemplates = storage.getShiftTemplates();
+    if (savedTemplates) {
+      setShiftTemplates(savedTemplates);
+    }
   }, []);
 
   const handleDelete = (e: React.BaseSyntheticEvent, id: string) => {
@@ -330,6 +498,20 @@ const HomePage = () => {
     if (window.confirm("Excluir item permanentemente?")) {
       storage.deleteReport(id);
       setReports(prev => prev.filter(r => r.id !== id));
+    }
+  };
+
+  const handleEditShift = (shift: string) => {
+    setEditingShift(shift);
+    setTempTemplate(shiftTemplates[shift]);
+  };
+
+  const handleSaveShift = () => {
+    if (editingShift) {
+      const newTemplates = { ...shiftTemplates, [editingShift]: tempTemplate };
+      setShiftTemplates(newTemplates);
+      storage.saveShiftTemplates(newTemplates);
+      setEditingShift(null);
     }
   };
 
@@ -348,15 +530,16 @@ const HomePage = () => {
             <Menu className="w-6 h-6" />
           </button>
           <div>
-            <h1 className="text-2xl font-black text-black dark:text-white tracking-tight">ReportMaster</h1>
+            <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">ReportMaster</h1>
             <p className="text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest leading-none">S11D - Serra Sul</p>
           </div>
         </div>
       </header>
 
-      <div className="bg-slate-200 dark:bg-dark-card p-1 rounded-xl flex shadow-inner">
-        <button onClick={() => setActiveTab('template')} className={`flex-1 py-2.5 rounded-lg text-xs font-black transition-all ${activeTab === 'template' ? 'bg-white dark:bg-dark-bg text-blue-600 shadow-sm' : 'text-slate-600 dark:text-slate-400 opacity-70'}`}>Meus Modelos</button>
-        <button onClick={() => setActiveTab('report')} className={`flex-1 py-2.5 rounded-lg text-xs font-black transition-all ${activeTab === 'report' ? 'bg-white dark:bg-dark-bg text-emerald-600 shadow-sm' : 'text-slate-600 dark:text-slate-400 opacity-70'}`}>Relatórios Prontos</button>
+      <div className="bg-slate-200 dark:bg-dark-card p-1 rounded-xl flex shadow-inner overflow-x-auto gap-1">
+        <button onClick={() => setActiveTab('template')} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-[10px] font-black transition-all uppercase ${activeTab === 'template' ? 'bg-white dark:bg-dark-bg text-blue-600 shadow-sm' : 'text-slate-600 dark:text-slate-400 opacity-70'}`}>Meus Modelos</button>
+        <button onClick={() => setActiveTab('report')} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-[10px] font-black transition-all uppercase ${activeTab === 'report' ? 'bg-white dark:bg-dark-bg text-emerald-600 shadow-sm' : 'text-slate-600 dark:text-slate-400 opacity-70'}`}>Relatórios</button>
+        <button onClick={() => setActiveTab('shift_start')} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-[10px] font-black transition-all uppercase ${activeTab === 'shift_start' ? 'bg-white dark:bg-dark-bg text-purple-600 shadow-sm' : 'text-slate-600 dark:text-slate-400 opacity-70'}`}>Início de Turno</button>
       </div>
 
       {activeTab === 'template' && (
@@ -365,26 +548,87 @@ const HomePage = () => {
         </Button>
       )}
 
-      <div className="grid gap-3 mt-1">
-        {filteredReports.map((report) => (
-          <div key={report.id} onClick={() => navigate(`/edit/${report.id}`)} className={`bg-white dark:bg-dark-card p-4 rounded-2xl border-l-[6px] shadow-sm relative active:scale-[0.98] transition-all ${report.type === 'report' ? 'border-emerald-500' : 'border-blue-600'}`}>
-            <div className="flex flex-col pr-8">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{report.omNumber || 'SEM NÚMERO'}</span>
-              <h3 className="font-bold text-black dark:text-white text-sm leading-tight mt-0.5 truncate">{report.omDescription}</h3>
+      {activeTab === 'shift_start' ? (
+        <div className="grid grid-cols-1 gap-4 mt-2">
+          {['A', 'B', 'C', 'D'].map((shift) => (
+            <div key={shift} className="bg-white dark:bg-dark-card p-5 rounded-3xl border-l-8 border-purple-500 shadow-sm flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aviso de Início</span>
+                  <h3 className="text-lg font-black dark:text-white">Turno {shift}</h3>
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => handleEditShift(shift)}
+                    className="p-2.5 bg-slate-100 dark:bg-dark-bg rounded-xl text-slate-600 dark:text-slate-400 active:scale-90 transition-all border border-slate-200 dark:border-dark-border"
+                    title="Editar Integrantes"
+                  >
+                    <Edit3 className="w-5 h-5" />
+                  </button>
+                  <button 
+                    onClick={() => {
+                      const today = new Date().toLocaleDateString('pt-BR');
+                      const template = shiftTemplates[shift];
+                      const message = `INFORME DE INCIO DE TURNO\n\n${template.replace('{{date}}', today)}`;
+                      sendToWhatsApp(message);
+                    }}
+                    className="bg-purple-600 text-white p-2.5 rounded-xl shadow-lg shadow-purple-200 dark:shadow-none active:scale-90 transition-all"
+                    title="Enviar via WhatsApp"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {editingShift === shift ? (
+                <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <textarea 
+                    value={tempTemplate} 
+                    onChange={(e) => setTempTemplate(e.target.value)}
+                    rows={12}
+                    className="w-full p-3 text-xs font-mono font-semibold bg-slate-50 dark:bg-dark-bg border dark:border-dark-border rounded-xl focus:ring-2 focus:ring-purple-200 outline-none dark:text-white"
+                    placeholder="Edite as informações e nomes dos integrantes..."
+                  />
+                  <div className="flex gap-2">
+                    <Button onClick={() => setEditingShift(null)} variant="secondary" className="flex-1 py-2 text-xs">Cancelar</Button>
+                    <Button onClick={handleSaveShift} variant="primary" className="flex-1 py-2 text-xs bg-purple-600 shadow-purple-100">
+                      <Save className="w-4 h-4" /> Salvar Modelo
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-slate-50 dark:bg-dark-bg p-3 rounded-2xl border border-slate-100 dark:border-dark-border">
+                   <p className="text-[10px] font-mono text-slate-600 dark:text-slate-400 whitespace-pre-wrap leading-relaxed line-clamp-3">
+                     {shiftTemplates[shift].replace('{{date}}', new Date().toLocaleDateString('pt-BR'))}
+                   </p>
+                   <button onClick={() => handleEditShift(shift)} className="mt-2 text-[10px] font-black uppercase text-purple-600 dark:text-purple-400">Ver mais / Editar Integrantes</button>
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-4 mt-2 text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">
-              <span className="flex items-center gap-1.5"><Calendar className="w-3 h-3 text-blue-500" /> {new Date(report.date).toLocaleDateString('pt-BR')}</span>
-              <span className="flex items-center gap-1.5"><Briefcase className="w-3 h-3 text-blue-500" /> {report.activityType}</span>
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-3 mt-1">
+          {filteredReports.map((report) => (
+            <div key={report.id} onClick={() => navigate(`/edit/${report.id}`)} className={`bg-white dark:bg-dark-card p-4 rounded-2xl border-l-[6px] shadow-sm relative active:scale-[0.98] transition-all ${report.type === 'report' ? 'border-emerald-500' : 'border-blue-600'}`}>
+              <div className="flex flex-col pr-8">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{report.omNumber || 'SEM NÚMERO'}</span>
+                <h3 className="font-bold text-slate-800 dark:text-white text-sm leading-tight mt-0.5 truncate">{report.omDescription}</h3>
+              </div>
+              <div className="flex items-center gap-4 mt-2 text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">
+                <span className="flex items-center gap-1.5"><Calendar className="w-3 h-3 text-blue-500" /> {new Date(report.date).toLocaleDateString('pt-BR')}</span>
+                <span className="flex items-center gap-1.5"><Briefcase className="w-3 h-3 text-blue-500" /> {report.activityType}</span>
+              </div>
+              <button onClick={(e) => handleDelete(e, report.id)} className="absolute top-4 right-3 text-slate-300 dark:text-slate-600 hover:text-rose-600 transition-colors p-1"><Trash2 className="w-5 h-5" /></button>
             </div>
-            <button onClick={(e) => handleDelete(e, report.id)} className="absolute top-4 right-3 text-slate-300 dark:text-slate-600 hover:text-rose-600 transition-colors p-1"><Trash2 className="w-5 h-5" /></button>
-          </div>
-        ))}
-        {filteredReports.length === 0 && (
-           <div className="py-12 text-center text-slate-400 dark:text-slate-500 text-xs font-bold border-2 border-dashed border-slate-200 dark:border-dark-border rounded-3xl opacity-60">
-             Nenhum item encontrado.
-           </div>
-        )}
-      </div>
+          ))}
+          {filteredReports.length === 0 && (
+             <div className="py-12 text-center text-slate-400 dark:text-slate-500 text-xs font-bold border-2 border-dashed border-slate-200 dark:border-dark-border rounded-3xl opacity-60">
+               Nenhum item encontrado.
+             </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -538,22 +782,21 @@ AUTOMAÇÃO MINA SERRA SUL
 🔖 Centro de Trabalho: ${formData.workCenter || ''}
 👥 Técnicos: ${formData.technicians || ''}`;
 
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedMessage}`;
-    
-    const link = document.createElement('a');
-    link.href = whatsappUrl;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    sendToWhatsApp(message);
   };
 
   const generatePDF = () => {
     const doc = new jsPDF();
     const margin = 15;
     let y = 15;
+
+    const addFooter = () => {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      const footerText = "relatorio gerado no app reportmast criado por rafael";
+      doc.text(footerText, 105, 290, { align: 'center' });
+    };
 
     doc.setFillColor(37, 99, 235);
     doc.rect(0, 0, 210, 40, 'F');
@@ -574,7 +817,7 @@ AUTOMAÇÃO MINA SERRA SUL
     doc.setFontSize(14);
     doc.text(stripSpecialChars(formData.omNumber || "8000XXXX"), 145, 26);
 
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(30, 41, 59); // slate-800
     y = 55;
 
     const addSectionHeader = (title: string) => {
@@ -594,7 +837,7 @@ AUTOMAÇÃO MINA SERRA SUL
       doc.text(stripSpecialChars(label).toUpperCase(), margin + xOffset, y);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
+      doc.setTextColor(30, 41, 59);
       doc.text(typeof value === 'boolean' ? (value ? "SIM" : "NAO") : stripSpecialChars(value || "-"), margin + xOffset, y + 5);
       return y + 12;
     };
@@ -621,7 +864,7 @@ AUTOMAÇÃO MINA SERRA SUL
     doc.setTextColor(100, 116, 139);
     doc.text("DESCRICAO DA OM", margin, y);
     y += 4;
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(30, 41, 59);
     doc.setFontSize(10);
     const descLines = doc.splitTextToSize(stripSpecialChars(formData.omDescription!), 180);
     doc.text(descLines, margin, y);
@@ -631,7 +874,7 @@ AUTOMAÇÃO MINA SERRA SUL
     doc.setTextColor(100, 116, 139);
     doc.text("ATIVIDADES EFETIVAMENTE EXECUTADAS", margin, y);
     y += 4;
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(30, 41, 59);
     doc.setFontSize(10);
     const execLines = doc.splitTextToSize(stripSpecialChars(formData.activityExecuted!), 180);
     doc.text(execLines, margin, y);
@@ -644,7 +887,9 @@ AUTOMAÇÃO MINA SERRA SUL
     y += 15;
     addDataRow("Centro de Trabalho", formData.workCenter!);
     addDataRow("Equipe Técnica Envolvida", formData.technicians!, 60);
-    y += 20;
+    
+    // Rodapé da primeira página
+    addFooter();
 
     if (formData.photos?.length) {
       doc.addPage();
@@ -656,34 +901,52 @@ AUTOMAÇÃO MINA SERRA SUL
       y += 10;
 
       formData.photos.forEach((p, i) => {
-        if (y > 230) { doc.addPage(); y = 20; }
+        // Otimização: Garantir que as fotos caibam de 2 em 2 com legendas compactas
+        if (y > 230) { 
+          addFooter();
+          doc.addPage(); 
+          y = 20; 
+        }
         const col = i % 2;
         const xPos = margin + (col * 92);
-        doc.setDrawColor(203, 213, 225);
+        doc.setDrawColor(226, 232, 240);
         doc.rect(xPos, y, 88, 72);
-        try { doc.addImage(p.dataUrl, 'JPEG', xPos + 1.5, y + 1.5, 85, 60); } catch (e) { }
+        
+        try { 
+          // Otimização de Imagem: Usar compressão 'FAST' e formato JPEG eficiente
+          doc.addImage(p.dataUrl, 'JPEG', xPos + 1, y + 1, 86, 60, undefined, 'FAST'); 
+        } catch (e) {
+          console.error("Erro ao adicionar imagem ao PDF", e);
+        }
+        
         if (p.caption) {
           doc.setFillColor(248, 250, 252);
-          doc.rect(xPos + 1.5, y + 62, 85, 8.5, 'F');
+          doc.rect(xPos + 1, y + 62, 86, 9, 'F');
           doc.setFontSize(7);
           doc.setFont("helvetica", "bold");
-          doc.setTextColor(51, 65, 85);
-          doc.text(doc.splitTextToSize(stripSpecialChars(p.caption), 82), xPos + 4, y + 66.5);
+          doc.setTextColor(71, 85, 105);
+          const captionLines = doc.splitTextToSize(stripSpecialChars(p.caption), 82);
+          doc.text(captionLines, xPos + 3, y + 66.5);
         }
-        if (col === 1 || i === formData.photos!.length - 1) y += 80;
+        
+        if (col === 1 || i === formData.photos!.length - 1) {
+          y += 78; // Espaçamento otimizado entre linhas de fotos
+        }
       });
+      // Rodapé da última página de fotos
+      addFooter();
     }
 
     doc.save(`RELATORIO_OM_${formData.omNumber || 'PENDENTE'}.pdf`);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-dark-bg pb-32 text-black dark:text-white transition-colors">
+    <div className="min-h-screen bg-slate-50 dark:bg-dark-bg pb-32 text-slate-800 dark:text-white transition-colors">
       <nav className="sticky top-0 z-30 bg-white dark:bg-dark-card border-b dark:border-dark-border px-4 py-3 flex items-center gap-3 shadow-md">
         <button onClick={() => navigate('/')} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-dark-bg transition-colors"><ChevronLeft className="dark:text-white w-6 h-6" /></button>
         <div>
           <h1 className="text-[10px] font-black uppercase tracking-widest text-blue-600">RELATÓRIO DE EXECUÇÃO</h1>
-          <p className="font-extrabold text-sm leading-none text-slate-900 dark:text-white">AUTOMAÇÃO MINA SERRA SUL</p>
+          <p className="font-extrabold text-sm leading-none text-slate-800 dark:text-white">AUTOMAÇÃO MINA SERRA SUL</p>
         </div>
       </nav>
 

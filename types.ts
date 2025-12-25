@@ -2,7 +2,7 @@
 export type ActivityType = 'preventiva' | 'corretiva';
 export type Shift = 'A' | 'B' | 'C' | 'D';
 export type WorkCenter = 'SC108HH' | 'SC118HH' | 'SC103HH' | 'SC105HH' | 'SC117HH';
-export type ReportType = 'template' | 'report';
+export type ReportType = 'template' | 'report' | 'shift_start';
 
 export interface ReportPhoto {
   id: string;

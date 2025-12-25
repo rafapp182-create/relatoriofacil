@@ -2,6 +2,7 @@
 import { Report } from '../types';
 
 const STORAGE_KEY = 'report_master_om_data';
+const SHIFT_TEMPLATES_KEY = 'report_master_shift_templates';
 const THEME_KEY = 'report_master_theme';
 
 export const storage = {
@@ -34,10 +35,25 @@ export const storage = {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
   },
 
+  // Shift Start Templates
+  getShiftTemplates: (): Record<string, string> | null => {
+    try {
+      const data = localStorage.getItem(SHIFT_TEMPLATES_KEY);
+      return data ? JSON.parse(data) : null;
+    } catch (e) {
+      return null;
+    }
+  },
+
+  saveShiftTemplates: (templates: Record<string, string>): void => {
+    localStorage.setItem(SHIFT_TEMPLATES_KEY, JSON.stringify(templates));
+  },
+
   // Backup & Restore
   exportBackup: (): void => {
     const reports = storage.getReports();
-    const data = JSON.stringify(reports, null, 2);
+    const templates = storage.getShiftTemplates();
+    const data = JSON.stringify({ reports, templates }, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -50,7 +66,14 @@ export const storage = {
   importBackup: (jsonString: string): boolean => {
     try {
       const parsed = JSON.parse(jsonString);
-      if (Array.isArray(parsed)) {
+      if (parsed.reports && Array.isArray(parsed.reports)) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed.reports));
+        if (parsed.templates) {
+          localStorage.setItem(SHIFT_TEMPLATES_KEY, JSON.stringify(parsed.templates));
+        }
+        return true;
+      } else if (Array.isArray(parsed)) {
+        // Fallback para formato antigo
         localStorage.setItem(STORAGE_KEY, jsonString);
         return true;
       }
