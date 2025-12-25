@@ -638,6 +638,7 @@ const ReportFormPage = () => {
   const { id } = useParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const autoSaveTimerRef = useRef<number | null>(null);
   
   const [isNew, setIsNew] = useState(!id);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -677,6 +678,26 @@ const ReportFormPage = () => {
     }
   }, [id]);
 
+  // Implementação de Autosave: sempre que o formData mudar, salva no localStorage
+  // Se for um template NOVO (ainda sem descrição ou atividade), esperamos até que o usuário insira algo
+  useEffect(() => {
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+
+    // Só auto-salva se for um relatório em andamento ou se for um template já iniciado
+    const shouldAutoSave = formData.type === 'report' || (formData.type === 'template' && (formData.omDescription || formData.activityExecuted));
+
+    if (shouldAutoSave) {
+      autoSaveTimerRef.current = window.setTimeout(() => {
+        storage.saveReport({ ...formData, updatedAt: Date.now() } as Report);
+        console.log("Autosave executado.");
+      }, 1000); // 1 segundo de debounce
+    }
+
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [formData]);
+
   const validate = (): string[] => {
     if (isNew) {
       const errs: string[] = [];
@@ -710,12 +731,25 @@ const ReportFormPage = () => {
       return;
     }
     
+    // Se estivermos iniciando um relatório a partir de um modelo
     if (saveType === 'report' && formData.type === 'template') {
+      // 1. Atualiza o modelo atual (autosave já cuida mas garantimos aqui)
       const templateToUpdate = { ...formData, type: 'template', updatedAt: Date.now() } as Report;
       storage.saveReport(templateToUpdate);
-      const newReportEntry = { ...formData, id: crypto.randomUUID(), type: 'report', updatedAt: Date.now(), createdAt: Date.now() } as Report;
+      
+      // 2. Cria uma CÓPIA do modelo para o novo relatório de execução
+      const newReportEntry = { 
+        ...formData, 
+        id: crypto.randomUUID(), 
+        type: 'report', 
+        date: new Date().toISOString().split('T')[0], // Reseta para hoje
+        updatedAt: Date.now(), 
+        createdAt: Date.now() 
+      } as Report;
       storage.saveReport(newReportEntry);
-      navigate('/', { state: { tab: 'report' } });
+      
+      // 3. Navega para a edição do novo relatório
+      navigate(`/edit/${newReportEntry.id}`, { replace: true });
     } else {
       const finalReport = { ...formData, type: saveType, updatedAt: Date.now() } as Report;
       storage.saveReport(finalReport);
@@ -901,7 +935,6 @@ AUTOMAÇÃO MINA SERRA SUL
       y += 10;
 
       formData.photos.forEach((p, i) => {
-        // Otimização: Garantir que as fotos caibam de 2 em 2 com legendas compactas
         if (y > 230) { 
           addFooter();
           doc.addPage(); 
@@ -913,7 +946,6 @@ AUTOMAÇÃO MINA SERRA SUL
         doc.rect(xPos, y, 88, 72);
         
         try { 
-          // Otimização de Imagem: Usar compressão 'FAST' e formato JPEG eficiente
           doc.addImage(p.dataUrl, 'JPEG', xPos + 1, y + 1, 86, 60, undefined, 'FAST'); 
         } catch (e) {
           console.error("Erro ao adicionar imagem ao PDF", e);
@@ -930,10 +962,9 @@ AUTOMAÇÃO MINA SERRA SUL
         }
         
         if (col === 1 || i === formData.photos!.length - 1) {
-          y += 78; // Espaçamento otimizado entre linhas de fotos
+          y += 78;
         }
       });
-      // Rodapé da última página de fotos
       addFooter();
     }
 
