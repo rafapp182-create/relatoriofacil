@@ -7,11 +7,228 @@ const THEME_KEY = 'report_master_theme';
 const AUTH_KEY = 'report_master_auth';
 const USERS_KEY = 'report_master_registered_users';
 
+// --- Blocos de Atividades Repetitivas ---
+
+const RAJANT_COMMON_ACTIVITIES = `✅  Acessar bccomander
+✅  Verificar os parametros
+✅  Custos dos peers
+✅  Link state change`;
+
+const REDE_REDUNDANCIA_ACTIVITIES = `✅  Preencha os itens abaixo marcando
+✅  Verificar indicação dos leds dos ozds, observando se as redundancias dos canais ch02 e ch3 estão ativo
+✅  Verificar condições de dio's e cordões
+✅  Verificar fixação e regulagem dos cabos.
+✅  Verificar integridade dos cabos.
+✅  Verificar conectores.
+✅  Abrir nota em caso de anormalidade, que não possa ser resolvida de imediato.
+✅  Desmobilização e 5s.`;
+
+const ATERRAMENTO_ACTIVITIES = `✅ 1) mobilização a area de atividade:
+✅ 2) atentar a exposição a fonte de radiação não ionizante ( radiação solar, campos magneticos );
+✅ 3) exposição a condição climática ( chuva, tempestade, chuvisco );
+✅ 4) transporte manual de ferramentais e acessorios para frente de serviço;
+✅ 5) apresentação entre a equipe de execução e análise da atividade, levando em conta a condição na posição e frente de serviço;
+✅ 6) leitura e análise de todos os passos da atividade a serem executados, seu processo, riscos e perigos. discutidos e informados a todos os integrantes;
+✅ _ utilizar e estar em acordo com a art da atividade, pts e outros que forem apresentadas, assinando e confirmando a compreensão das informações;
+✅ 7) realizar o bloqueio do circuito descrito pela matriz de bloqueio das condições e necessidades para a atividade proposta;
+✅ 8) se posicionar ao switch correspondente a solicitação;
+✅ 9) faça a conferencia para atividade para o serviço, faça o acesso com segurança e conforme regras vale;
+✅ 10) faça uma  pré-tanálise e confirme a falta ou deficiencia do aterramentoe sua funcionalidade de atuação e sinalização da mesma;
+✅ 11) execute a conferencia de ligação dos cabos de alimentação e sinal com o desenho eletrico / projeto;
+✅ 12) identifique os cabos de alimentação, caso não exista, marque com anilha ou caneta, certificando conforme desenho / projeto;
+✅ 13) observe os cabos ao entorno da área de trabalho. faça o desligamento dos bornes e efetue o isolamento provisorio dos fios e pontas dos cabos;
+✅ 14) faça a analise defina dos componentes a subtituir. efetue a retirada dos cabos de ligação;
+✅ 15) efetue a retirada dos componentes danificados e os deixe ao lado para futuro descarte;
+✅ 16) faça a reinstalação dos componentes novos no painel conforme especificações devidas, conforme projeto;
+✅ 17) faça a religamento dos cabos de alimentação e controle, conforme especificações tecnicas;
+✅ 18) faça a inserção dos cabos de alimentação, comando e sinal dos instrumentos, conforme projeto / desenho levantado;
+✅ 19) faça o religamento dos instrumentos conforme necessidade e indicação do fabricante;
+✅ 20) faça os ajustes dos suportes e sensores conforme perfeita leitura de dados dos mesmos;
+✅ 21) fazer teste funcional com o instrumento;
+✅ 22) após as atividades, efetuar os desboqueios eletricos;
+✅ 23) caso haja sobra de material novo em que se possa ser utilizado e ou aproveitado em outra obra, reunir, descrever e devolver todos estes ao aprovisionamento / preparação, para posterior devolução ao mro e ou demandar para outra ordem;
+✅ 24) efetuar vistoria em toda a área trabalhada, garantindo a retirada de todo e qualquer componente que possa acarretar avarias em circuito produtivo;
+✅ 25) efetuar a desmobilização da área;
+✅ 26) dar tratativa de descarte de todos os materiais / sobras (materiais que não servem para utilização);
+✅ 27) efetuar descarte de materiais, utilizando de locais e dispositivos já definidos e alinhados conforme padronização de descarte vale;
+✅ 28) efetuar apropriação de hh e preenchimentos das ordens, finalização e encerramento tecnico das mesmas.`;
+
+const MP_RADIO_RAJANT_ACTIVITIES = `✅  Verificar e registrar nivel sinal enlace.
+✅  Verificar e registrar relacao sinal ruido enlace.
+✅  Verificar e registrar canal de comunicacao.
+✅  Verificar a visada entre as antenas.
+✅  Verificar e corrigir desvios cabo coaxial.
+✅  Verificar e corrigir desvios nos conectores.
+✅  Verificar cabos e conexoes do painel do radio, quanto a desgate e oxidações.
+✅  Verificar energia,conexoes e cabos eletricos; validar se o rádio está devidamente conectado aos dispositivos de proteção elétrica, validar se os leds de status estão sem alarmes, validar se as conexões elétricas estão bem feitas e se os cabos elétricos estão íntegros.
+✅  Verificar componentes painel do radio.
+✅  Fazer limpeza interna painel do radio.
+✅  Fazer limpeza externa painel do radio.
+✅  Verificar a vedacao do painel do radio.
+✅  Verificar identificacao painel do radio.
+✅  Registrar informacoes dos desvios na om observações.`;
+
+const LIMPEZA_ATIVOS_ACTIVITIES = `✅  Checar controle de acesso
+✅  Efetuar limpeza externa e interna do painel
+✅  Efetuar limpeza dos componentes do painel
+✅  Checar vedação do painel
+✅  Verificar cabos das botoeiras (quando aplicavel)
+✅  Realizar reaperto das conexoes dos cabos de rede profibus(cor roxa), cabos da rede entre cartões (cabo verde), cabos de alimetação da fonte de alimetação
+✅  Checar link principal
+✅  Checar falha nos cartoes
+✅  Organizar cabos e identificalos
+✅  Checar integridade da fonte, ajustando o nível de tensão de saída se necessário para 24 volts
+✅  Conferir fixação da luminária interna do painel
+✅  Conferir aperto nos parafusos de fixação do espelho do painel
+✅  Conferir aperto nos parafusos de fixação do painel
+✅  Conferir na conexão do aterramento
+✅  Inspecionar distribuidores dio do painel
+✅  Verificar a integridade e limpezar do dio no interior do painel
+✅  Verificarar cabos de ligação do dio
+✅  Verificarar elementos de fixação quanto a perda do dio
+✅  Desmobilização e 5s`;
+
+const FIXACAO_SIMPLES_ACTIVITIES = `✅ Fazer procedimentos de segurança
+✅ Preparar ferramentas e materiais
+✅ Realizar bloqueio do equipamento
+✅ Realizar teste
+✅ Limpar local da tarefa
+✅ Retirar bloqueio do equipamento
+✅ Descartar residuos gerados
+✅ Apropriar mão de obra`;
+
+const FIXACAO_TAGS_ACTIVITIES = `✅ Passo a passo da atividade
+✅ Fazer procedimentos de segurança;
+✅ Preparar ferramentas e materiais;
+✅ Realizar limpeza geral do pl;
+✅ Confeccionar e instalar tag;
+✅ Apropriar mão de obra.`;
+
+const REPETIDORA_ACTIVITIES = `✅   limpar e avaliar os módulos fotovoltaicos (placas solares);
+✅  Verificar carga do controlador de carga;
+✅  Medir niveis de tensao do banco de baterias, dos paineis e do controlador de carga (substituir caso necessario)
+✅  Limpar e secar caixa do painel de controle (se necessario);
+✅  Limpar o dissipador de calor do controlador;
+✅  Verificar rádio cisco/rádio rajant;
+✅  Verificar integridades das antena(substituir se necessario)
+✅  Aferir pressão e calibrar pneus;
+✅  Registrar informacoes dos desvios na om`;
+
+const INITIAL_TEMPLATES: Report[] = [
+  // --- NOVOS MODELOS TRUCKLESS ---
+  {
+    id: 'template-truckless-inspecao-redundancia',
+    type: 'template', group: 'TRUCKLESS',
+    omDescription: 'MP INSPEÇÃO DE REDE DE REDUNDÂNCIA',
+    activityExecuted: REDE_REDUNDANCIA_ACTIVITIES,
+    date: new Date().toISOString().split('T')[0],
+    omNumber: '', equipment: '', local: '', activityType: 'preventiva',
+    startTime: '', endTime: '', iamoDeviation: false, isFinished: true, hasPendencies: false,
+    teamShift: 'B', workCenter: 'SC108HH', technicians: '', photos: [], createdAt: Date.now(), updatedAt: Date.now()
+  },
+  {
+    id: 'template-truckless-instalar-aterramento',
+    type: 'template', group: 'TRUCKLESS',
+    omDescription: 'INSTALAR ATERRAMENTO NO ATIVO',
+    activityExecuted: ATERRAMENTO_ACTIVITIES,
+    date: new Date().toISOString().split('T')[0],
+    omNumber: '', equipment: '', local: '', activityType: 'preventiva',
+    startTime: '', endTime: '', iamoDeviation: false, isFinished: true, hasPendencies: false,
+    teamShift: 'B', workCenter: 'SC108HH', technicians: '', photos: [], createdAt: Date.now(), updatedAt: Date.now()
+  },
+  {
+    id: 'template-truckless-mp-radio-rajant',
+    type: 'template', group: 'TRUCKLESS',
+    omDescription: 'MP RADIO RAJAT',
+    activityExecuted: MP_RADIO_RAJANT_ACTIVITIES,
+    date: '2025-12-24',
+    omNumber: '', equipment: '', local: '', activityType: 'preventiva',
+    startTime: '', endTime: '', iamoDeviation: false, isFinished: true, hasPendencies: false,
+    teamShift: 'B', workCenter: 'SC108HH', technicians: '', photos: [], createdAt: Date.now(), updatedAt: Date.now()
+  },
+  {
+    id: 'template-truckless-limpeza-ativos',
+    type: 'template', group: 'TRUCKLESS',
+    omDescription: 'MP LIMPEZA DE ATIVOS',
+    activityExecuted: LIMPEZA_ATIVOS_ACTIVITIES,
+    date: new Date().toISOString().split('T')[0],
+    omNumber: '', equipment: '', local: '', activityType: 'preventiva',
+    startTime: '', endTime: '', iamoDeviation: false, isFinished: true, hasPendencies: false,
+    teamShift: 'B', workCenter: 'SC108HH', technicians: '', photos: [], createdAt: Date.now(), updatedAt: Date.now()
+  },
+  {
+    id: 'template-truckless-fixar-fonte',
+    type: 'template', group: 'TRUCKLESS',
+    omDescription: 'FIXAR FONTE RAJANT',
+    activityExecuted: FIXACAO_SIMPLES_ACTIVITIES,
+    date: new Date().toISOString().split('T')[0],
+    omNumber: '', equipment: '', local: '', activityType: 'preventiva',
+    startTime: '', endTime: '', iamoDeviation: false, isFinished: true, hasPendencies: false,
+    teamShift: 'B', workCenter: 'SC108HH', technicians: '', photos: [], createdAt: Date.now(), updatedAt: Date.now()
+  },
+  {
+    id: 'template-truckless-tag-definitivo',
+    type: 'template', group: 'TRUCKLESS',
+    omDescription: 'REALIZAR FIXAÇÃO DE TAG DEFINITIVO NO SW',
+    activityExecuted: FIXACAO_TAGS_ACTIVITIES,
+    date: '2025-12-25',
+    omNumber: '', equipment: '', local: '', activityType: 'preventiva',
+    startTime: '', endTime: '', iamoDeviation: false, isFinished: true, hasPendencies: false,
+    teamShift: 'B', workCenter: 'SC108HH', technicians: '', photos: [], createdAt: Date.now(), updatedAt: Date.now()
+  },
+  {
+    id: 'template-truckless-tag-cabos',
+    type: 'template', group: 'TRUCKLESS',
+    omDescription: 'INSTALAR TAG DE IDENTIFICAÇÃO NOS CABOS',
+    activityExecuted: FIXACAO_TAGS_ACTIVITIES,
+    date: new Date().toISOString().split('T')[0],
+    omNumber: '', equipment: '', local: '', activityType: 'preventiva',
+    startTime: '', endTime: '', iamoDeviation: false, isFinished: true, hasPendencies: false,
+    teamShift: 'B', workCenter: 'SC108HH', technicians: '', photos: [], createdAt: Date.now(), updatedAt: Date.now()
+  },
+  {
+    id: 'template-truckless-repetidoras-moveis',
+    type: 'template', group: 'TRUCKLESS',
+    omDescription: 'MP REPETIDORAS MOVEIS',
+    activityExecuted: REPETIDORA_ACTIVITIES,
+    date: new Date().toISOString().split('T')[0],
+    omNumber: '', equipment: '', local: '', activityType: 'preventiva',
+    startTime: '00:50', endTime: '02:51', iamoDeviation: false, isFinished: true, hasPendencies: false,
+    teamShift: 'B', workCenter: 'SC108HH', technicians: '', photos: [], createdAt: Date.now(), updatedAt: Date.now()
+  },
+  // --- MODELOS DE RAJANT (ANTERIORES) ---
+  {
+    id: 'template-truckless-rajant-overland',
+    type: 'template', group: 'TRUCKLESS',
+    omDescription: 'VALIDAÇÃO LOGICA RAJANTS - OVERLAND',
+    activityExecuted: RAJANT_COMMON_ACTIVITIES,
+    date: new Date().toISOString().split('T')[0],
+    omNumber: '', equipment: 'RAJANTS OVERLAND', local: 'OVERLAND', activityType: 'preventiva',
+    startTime: '', endTime: '', iamoDeviation: false, isFinished: true, hasPendencies: false,
+    teamShift: 'A', workCenter: 'SC108HH', technicians: '', photos: [], createdAt: Date.now(), updatedAt: Date.now()
+  },
+  {
+    id: 'template-truckless-rajant-s3',
+    type: 'template', group: 'TRUCKLESS',
+    omDescription: 'VALIDAÇÃO LOGICA RAJANTS - SISTEMA 3',
+    activityExecuted: RAJANT_COMMON_ACTIVITIES,
+    date: new Date().toISOString().split('T')[0],
+    omNumber: '202506564354', equipment: 'RAJANTS S3', local: 'S3', activityType: 'preventiva',
+    startTime: '', endTime: '', iamoDeviation: false, isFinished: false, hasPendencies: true,
+    pendencyDescription: 'Pendência identificada durante a validação',
+    teamShift: 'A', workCenter: 'SC108HH', technicians: '', photos: [], createdAt: Date.now(), updatedAt: Date.now()
+  }
+];
+
 export const storage = {
   getReports: (): Report[] => {
     try {
       const data = localStorage.getItem(STORAGE_KEY);
-      return data ? JSON.parse(data) : [];
+      if (!data) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_TEMPLATES));
+        return INITIAL_TEMPLATES;
+      }
+      return JSON.parse(data);
     } catch (error) {
       console.error('Error loading reports from storage', error);
       return [];
@@ -37,7 +254,6 @@ export const storage = {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
   },
 
-  // Auth Management
   getUsers: (): User[] => {
     try {
       const data = localStorage.getItem(USERS_KEY);
@@ -79,7 +295,6 @@ export const storage = {
     localStorage.removeItem(AUTH_KEY);
   },
 
-  // Shift Start Templates
   getShiftTemplates: (): Record<string, string> | null => {
     try {
       const data = localStorage.getItem(SHIFT_TEMPLATES_KEY);
@@ -93,7 +308,6 @@ export const storage = {
     localStorage.setItem(SHIFT_TEMPLATES_KEY, JSON.stringify(templates));
   },
 
-  // Backup & Restore
   exportBackup: (): void => {
     const reports = storage.getReports();
     const templates = storage.getShiftTemplates();
@@ -126,7 +340,6 @@ export const storage = {
     }
   },
 
-  // Theme Management
   getTheme: (): 'light' | 'dark' => {
     return (localStorage.getItem(THEME_KEY) as 'light' | 'dark') || 'light';
   },

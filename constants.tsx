@@ -1,7 +1,9 @@
 
-import { Shift, WorkCenter } from './types';
+import { Shift, WorkCenter, Group } from './types';
 
 export const SHIFTS: Shift[] = ['A', 'B', 'C', 'D'];
+
+export const GROUPS: Group[] = ['TRUCKLESS', 'AUTOMAÇÃO', 'EMBARCADOS'];
 
 export const TECHNICIANS_BY_SHIFT: Record<Shift, string[]> = {
   'A': ['Ilton', 'Hannyel', 'Misael', 'Arilson', 'Pedro', 'Diran', 'Alcino', 'Assuero'],

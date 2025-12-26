@@ -8,7 +8,7 @@ import {
   Download, 
   Share2, 
   Camera, 
-  Image as ImageIcon,
+  ImageIcon,
   CheckCircle2,
   User as UserIcon,
   ArrowRight,
@@ -38,11 +38,16 @@ import {
   Lock,
   LogIn,
   LogOut,
-  ArrowLeft
+  ArrowLeft,
+  Truck,
+  Cpu,
+  Layers,
+  Wrench,
+  Anchor
 } from 'lucide-react';
 import { storage } from './services/storage';
-import { Report, Shift, ReportType, ReportPhoto, WorkCenter, UserSession, User } from './types';
-import { SHIFTS, WORK_CENTERS, TECHNICIANS_BY_SHIFT } from './constants';
+import { Report, Shift, ReportType, ReportPhoto, WorkCenter, UserSession, User, Group } from './types';
+import { SHIFTS, WORK_CENTERS, TECHNICIANS_BY_SHIFT, GROUPS } from './constants';
 import { jsPDF } from 'jspdf';
 
 // --- Contexto de Tema ---
@@ -52,6 +57,8 @@ const ThemeContext = createContext<{
   user: UserSession | null;
   login: (username: string) => void;
   logout: () => void;
+  activeGroup: Group;
+  setActiveGroup: (group: Group) => void;
 } | null>(null);
 
 const useTheme = () => {
@@ -207,10 +214,12 @@ Renato`
 // --- Utilitários ---
 const stripSpecialChars = (text: string) => {
   if (!text) return "";
+  // Normaliza e remove acentos, mas mantém caracteres latinos básicos e pontuação comum.
+  // Remove especificamente o que o jsPDF (Helvetica) não consegue renderizar (Unicode estendido e emojis do texto bruto).
   return text
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^\x20-\x7E\s]/g, "")
+    .replace(/[^\x20-\x7E\s\xA1-\xFF]/g, "") 
     .trim();
 };
 
@@ -224,6 +233,42 @@ const sendToWhatsApp = (message: string) => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+};
+
+const getGroupIcon = (group: Group, size: string = 'w-6 h-6') => {
+  switch (group) {
+    case 'TRUCKLESS': return <Wrench className={size} />;
+    case 'AUTOMAÇÃO': return <Cpu className={size} />;
+    case 'EMBARCADOS': return <Anchor className={size} />;
+    default: return <Briefcase className={size} />;
+  }
+};
+
+const getGroupColor = (group: Group) => {
+  switch (group) {
+    case 'TRUCKLESS': return 'bg-blue-500';
+    case 'AUTOMAÇÃO': return 'bg-purple-500';
+    case 'EMBARCADOS': return 'bg-amber-500';
+    default: return 'bg-slate-500';
+  }
+};
+
+// --- Helper para renderizar Emojis como Imagem no PDF ---
+const renderEmojiToDataUrl = (emoji: string): string | null => {
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.font = "48px serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(emoji, 32, 32);
+    return canvas.toDataURL('image/png');
+  } catch (e) {
+    return null;
+  }
 };
 
 // --- Componentes de UI ---
@@ -658,6 +703,7 @@ const ImageEditor: React.FC<{
 const HomePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { activeGroup } = useTheme();
   const [reports, setReports] = useState<Report[]>([]);
   const [activeTab, setActiveTab] = useState<ReportType>('template');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -704,10 +750,11 @@ const HomePage = () => {
     }
   };
 
-  const filteredReports = reports.filter(r => r.type === activeTab);
+  // Filtragem por Tipo de Aba E pelo Grupo Ativo (Truckless ou Automação)
+  const filteredReports = reports.filter(r => r.type === activeTab && r.group === activeGroup);
 
   return (
-    <div className="flex flex-col gap-5 p-5 max-w-2xl mx-auto w-full pb-20">
+    <div className="flex flex-col gap-5 p-5 max-w-2xl mx-auto w-full pb-40">
       <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
       
       <header className="pt-2 flex items-center justify-between">
@@ -731,9 +778,14 @@ const HomePage = () => {
         <button onClick={() => setActiveTab('shift_start')} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-[10px] font-black transition-all uppercase ${activeTab === 'shift_start' ? 'bg-white dark:bg-dark-bg text-purple-600 shadow-sm' : 'text-slate-600 dark:text-slate-400 opacity-70'}`}>Início de Turno</button>
       </div>
 
+      <div className="flex items-center gap-2 px-2">
+        <div className={`w-2 h-2 rounded-full ${getGroupColor(activeGroup)}`} />
+        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Exibindo: {activeGroup}</span>
+      </div>
+
       {activeTab === 'template' && (
         <Button onClick={() => navigate('/new')} className="h-14 rounded-xl text-base shadow-lg">
-          <Plus className="w-5 h-5" /> Criar Novo Modelo
+          <Plus className="w-5 h-5" /> Criar Novo Modelo {activeGroup}
         </Button>
       )}
 
@@ -813,7 +865,7 @@ const HomePage = () => {
           ))}
           {filteredReports.length === 0 && (
              <div className="py-12 text-center text-slate-400 dark:text-slate-500 text-xs font-bold border-2 border-dashed border-slate-200 dark:border-dark-border rounded-3xl opacity-60">
-               Nenhum item encontrado.
+               Nenhum item em {activeGroup} encontrado.
              </div>
           )}
         </div>
@@ -825,6 +877,7 @@ const HomePage = () => {
 const ReportFormPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { activeGroup } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const autoSaveTimerRef = useRef<number | null>(null);
@@ -836,7 +889,8 @@ const ReportFormPage = () => {
   
   const [formData, setFormData] = useState<Partial<Report>>({
     id: crypto.randomUUID(), 
-    type: 'template', 
+    type: 'template',
+    group: activeGroup, // Herda o grupo ativo
     omDescription: '', 
     activityExecuted: '', 
     date: new Date().toISOString().split('T')[0], 
@@ -959,6 +1013,7 @@ const ReportFormPage = () => {
 
   const shareViaWhatsApp = () => {
     const message = `RELATÓRIO DE EXECUÇÃO
+GRUPO: ${formData.group}
 AUTOMAÇÃO MINA SERRA SUL
 
 🗓️ Data: ${formData.date ? new Date(formData.date).toLocaleDateString('pt-BR') : ''}
@@ -999,12 +1054,21 @@ AUTOMAÇÃO MINA SERRA SUL
       doc.text(footerText, 105, 290, { align: 'center' });
     };
 
+    const drawPDFEmoji = (emoji: string, x: number, yPos: number, size = 5) => {
+      const dataUrl = renderEmojiToDataUrl(emoji);
+      if (dataUrl) {
+        doc.addImage(dataUrl, 'PNG', x, yPos - size + 1, size, size);
+        return true;
+      }
+      return false;
+    };
+
     doc.setFillColor(37, 99, 235);
     doc.rect(0, 0, 210, 40, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.text("SISTEMA DE RELATORIOS AUTOMACAO", margin, 15);
+    doc.text(`GRUPO: ${formData.group} - SISTEMA DE RELATORIOS`, margin, 15);
     doc.setFontSize(18);
     doc.text("RELATORIO DE EXECUCAO", margin, 26);
     doc.setFontSize(10);
@@ -1021,21 +1085,35 @@ AUTOMAÇÃO MINA SERRA SUL
     doc.setTextColor(30, 41, 59); // slate-800
     y = 55;
 
-    const addSectionHeader = (title: string) => {
+    const addSectionHeader = (title: string, emoji = "") => {
       doc.setFillColor(241, 245, 249);
       doc.rect(margin, y - 5, 180, 8, 'F');
+      
+      let xOffset = margin + 3;
+      if (emoji) {
+        drawPDFEmoji(emoji, xOffset, y + 0.5, 4.5);
+        xOffset += 6;
+      }
+
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
       doc.setTextColor(30, 41, 59);
-      doc.text(title.toUpperCase(), margin + 3, y + 1);
+      doc.text(title.toUpperCase(), xOffset, y + 1);
       y += 12;
     };
 
-    const addDataRow = (label: string, value: string | boolean, xOffset = 0) => {
+    const addDataRow = (label: string, value: string | boolean, xOffset = 0, labelEmoji = "") => {
+      let xPos = margin + xOffset;
+      if (labelEmoji) {
+        drawPDFEmoji(labelEmoji, xPos, y - 1, 3.5);
+        xPos += 5;
+      }
+
       doc.setFont("helvetica", "bold");
       doc.setFontSize(7);
       doc.setTextColor(100, 116, 139);
-      doc.text(stripSpecialChars(label).toUpperCase(), margin + xOffset, y);
+      doc.text(stripSpecialChars(label).toUpperCase(), xPos, y);
+      
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
       doc.setTextColor(30, 41, 59);
@@ -1043,27 +1121,28 @@ AUTOMAÇÃO MINA SERRA SUL
       return y + 12;
     };
 
-    addSectionHeader("DADOS DE IDENTIFICACAO");
-    addDataRow("Data de Execucao", new Date(formData.date!).toLocaleDateString('pt-BR'));
-    addDataRow("Equipamento", formData.equipment!, 60);
-    addDataRow("Local/Frente", formData.local!, 120);
+    addSectionHeader("DADOS DE IDENTIFICACAO", "📍");
+    addDataRow("Data de Execucao", new Date(formData.date!).toLocaleDateString('pt-BR'), 0, "🗓️");
+    addDataRow("Equipamento", formData.equipment!, 60, "🚜");
+    addDataRow("Local/Frente", formData.local!, 120, "📌");
     y += 15;
     
-    addDataRow("Tipo de Atividade", formData.activityType!);
-    addDataRow("Periodo", `${formData.startTime} ate ${formData.endTime}`, 60);
-    addDataRow("Turno da Equipe", `TURNO ${formData.teamShift}`, 120);
+    addDataRow("Tipo de Atividade", formData.activityType!, 0, "🛠️");
+    addDataRow("Periodo", `${formData.startTime} ate ${formData.endTime}`, 60, "⏰");
+    addDataRow("Turno da Equipe", `TURNO ${formData.teamShift}`, 120, "📈");
     y += 15;
 
     if (formData.iamoDeviation) {
-      addDataRow("Ocorrencia IAMO", "SIM");
+      addDataRow("Ocorrencia IAMO", "SIM", 0, "🛑");
       addDataRow("Justificativa IAMO", formData.iamoDescription || "-", 60);
       y += 15;
     }
 
-    addSectionHeader("DETALHAMENTO TECNICO");
+    addSectionHeader("DETALHAMENTO TECNICO", "📝");
+    drawPDFEmoji("♻️", margin, y - 1, 3.5);
     doc.setFontSize(7);
     doc.setTextColor(100, 116, 139);
-    doc.text("DESCRICAO DA OM", margin, y);
+    doc.text("DESCRICAO DA OM", margin + 5, y);
     y += 4;
     doc.setTextColor(30, 41, 59);
     doc.setFontSize(10);
@@ -1071,23 +1150,41 @@ AUTOMAÇÃO MINA SERRA SUL
     doc.text(descLines, margin, y);
     y += (descLines.length * 5) + 6;
 
+    drawPDFEmoji("📈", margin, y - 1, 3.5);
     doc.setFontSize(7);
     doc.setTextColor(100, 116, 139);
-    doc.text("ATIVIDADES EFETIVAMENTE EXECUTADAS", margin, y);
+    doc.text("ATIVIDADES EFETIVAMENTE EXECUTADAS", margin + 5, y);
     y += 4;
     doc.setTextColor(30, 41, 59);
     doc.setFontSize(10);
-    const execLines = doc.splitTextToSize(stripSpecialChars(formData.activityExecuted!), 180);
-    doc.text(execLines, margin, y);
-    y += (execLines.length * 5) + 10;
+    
+    // Processamento especial para listas com checkmarks (✅)
+    const execText = formData.activityExecuted || "";
+    const execLinesArr = execText.split('\n');
+    execLinesArr.forEach(line => {
+      const isCheck = line.trim().startsWith('✅');
+      const cleanLine = line.trim().replace(/^✅/, '').trim();
+      const wrappedLines = doc.splitTextToSize(stripSpecialChars(cleanLine), 170);
+      
+      wrappedLines.forEach((wLine: string, idx: number) => {
+        if (y > 270) { addFooter(); doc.addPage(); y = 20; }
+        if (isCheck && idx === 0) {
+          drawPDFEmoji("✅", margin, y + 1, 4);
+        }
+        doc.text(wLine, isCheck ? margin + 6 : margin, y);
+        y += 5;
+      });
+      y += 2;
+    });
+    y += 8;
 
-    addSectionHeader("STATUS FINAL E EQUIPE");
-    addDataRow("Status OM", formData.isFinished ? "CONCLUIDA" : "EM ANDAMENTO");
-    addDataRow("Pendencias", formData.hasPendencies ? "SIM" : "NAO", 60);
+    addSectionHeader("STATUS FINAL E EQUIPE", "🏁");
+    addDataRow("Status OM", formData.isFinished ? "CONCLUIDA" : "EM ANDAMENTO", 0, "🎯");
+    addDataRow("Pendencias", formData.hasPendencies ? "SIM" : "NAO", 60, "🔔");
     if (formData.hasPendencies) addDataRow("Descritivo Pendencia", formData.pendencyDescription!, 120);
     y += 15;
-    addDataRow("Centro de Trabalho", formData.workCenter!);
-    addDataRow("Equipe Técnica Envolvida", formData.technicians!, 60);
+    addDataRow("Centro de Trabalho", formData.workCenter!, 0, "🔖");
+    addDataRow("Equipe Técnica Envolvida", formData.technicians!, 60, "👥");
     
     addFooter();
 
@@ -1097,7 +1194,8 @@ AUTOMAÇÃO MINA SERRA SUL
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(37, 99, 235);
-      doc.text("EVIDENCIAS FOTOGRAFICAS", margin, y);
+      drawPDFEmoji("📸", margin, y + 1, 7);
+      doc.text("EVIDENCIAS FOTOGRAFICAS", margin + 9, y);
       y += 10;
 
       formData.photos.forEach((p, i) => {
@@ -1124,7 +1222,11 @@ AUTOMAÇÃO MINA SERRA SUL
       });
       addFooter();
     }
-    doc.save(`RELATORIO_OM_${formData.omNumber || 'PENDENTE'}.pdf`);
+    
+    const fileName = `${formData.omNumber || 'SEM_OM'} - ${formData.omDescription || 'RELATORIO'}`
+      .replace(/[/\\?%*:|"<>]/g, '-') 
+      .substring(0, 100); 
+    doc.save(`${fileName}.pdf`);
   };
 
   return (
@@ -1132,7 +1234,7 @@ AUTOMAÇÃO MINA SERRA SUL
       <nav className="sticky top-0 z-30 bg-white dark:bg-dark-card border-b dark:border-dark-border px-4 py-3 flex items-center gap-3 shadow-md">
         <button onClick={() => navigate('/')} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-dark-bg transition-colors"><ChevronLeft className="dark:text-white w-6 h-6" /></button>
         <div>
-          <h1 className="text-[10px] font-black uppercase tracking-widest text-blue-600">RELATÓRIO DE EXECUÇÃO</h1>
+          <h1 className="text-[10px] font-black uppercase tracking-widest text-blue-600">RELATÓRIO DE EXECUÇÃO - {formData.group}</h1>
           <p className="font-extrabold text-sm leading-none text-slate-800 dark:text-white">AUTOMAÇÃO MINA SERRA SUL</p>
         </div>
       </nav>
@@ -1140,11 +1242,28 @@ AUTOMAÇÃO MINA SERRA SUL
       {editingPhoto && <ImageEditor photo={editingPhoto} onSave={saveMarkedPhoto} onCancel={() => setEditingPhoto(null)} />}
 
       <div className="p-4 max-w-2xl mx-auto flex flex-col gap-4">
+        {/* Seletor de Grupo Dinâmico */}
+        <div className="bg-white dark:bg-dark-card p-1 rounded-2xl flex shadow-sm border dark:border-dark-border overflow-hidden">
+          {GROUPS.map(g => {
+            const isActive = formData.group === g;
+            return (
+              <button 
+                key={g} 
+                onClick={() => setFormData(p => ({...p, group: g}))}
+                className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 dark:shadow-none' : 'text-slate-400 dark:text-slate-500'}`}
+              >
+                {getGroupIcon(g, 'w-3.5 h-3.5')}
+                {g}
+              </button>
+            );
+          })}
+        </div>
+
         {isNew && (
           <div className="bg-white dark:bg-dark-card border-2 border-blue-500/20 p-4 rounded-3xl flex items-center gap-4 shadow-sm">
              <div className="bg-blue-500/10 p-3 rounded-2xl"><ClipboardList className="w-6 h-6 text-blue-600" /></div>
              <div className="flex flex-col">
-                <span className="font-black text-xs uppercase text-blue-700 dark:text-blue-400">Novo Modelo</span>
+                <span className="font-black text-xs uppercase text-blue-700 dark:text-blue-400">Novo Modelo ({activeGroup})</span>
                 <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Preencha o escopo da atividade base.</p>
              </div>
           </div>
@@ -1397,11 +1516,44 @@ AUTOMAÇÃO MINA SERRA SUL
   );
 };
 
+// --- Bottom Navigation Component ---
+const BottomNav = () => {
+  const { activeGroup, setActiveGroup } = useTheme();
+  const location = useLocation();
+  const isHome = location.pathname === '/';
+
+  if (!isHome) return null;
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-50 px-6 pb-8 pt-4 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-dark-bg dark:via-dark-bg/95 dark:to-transparent pointer-events-none">
+      <div className="max-w-md mx-auto bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-[2.5rem] p-2 flex shadow-2xl border border-slate-200/50 dark:border-dark-border/50 pointer-events-auto overflow-hidden">
+        {GROUPS.map((group) => {
+          const isActive = activeGroup === group;
+          return (
+            <button
+              key={group}
+              onClick={() => setActiveGroup(group)}
+              className={`flex-1 relative flex flex-col items-center justify-center gap-1 py-4 transition-all duration-300 rounded-[2rem] ${isActive ? 'bg-blue-600 text-white shadow-xl scale-105' : 'text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-dark-bg'}`}
+            >
+              {getGroupIcon(group, `w-6 h-6 ${isActive ? 'scale-110' : ''} transition-transform`)}
+              <span className="text-[10px] font-black uppercase tracking-widest">{group}</span>
+              {isActive && (
+                <div className="absolute -bottom-1 w-1 h-1 bg-white rounded-full" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 // --- Main App ---
 
 const ThemeProvider = ({ children }: { children?: React.ReactNode }) => {
   const [theme, setTheme] = useState<'light' | 'dark'>(storage.getTheme());
   const [user, setUser] = useState<UserSession | null>(storage.getSession());
+  const [activeGroup, setActiveGroup] = useState<Group>('TRUCKLESS');
 
   useEffect(() => {
     if (theme === 'dark') document.documentElement.classList.add('dark');
@@ -1423,7 +1575,7 @@ const ThemeProvider = ({ children }: { children?: React.ReactNode }) => {
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, user, login, logout }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, user, login, logout, activeGroup, setActiveGroup }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -1440,6 +1592,7 @@ const App = () => {
             <Route path="/new" element={<ProtectedRoute><ReportFormPage /></ProtectedRoute>} />
             <Route path="/edit/:id" element={<ProtectedRoute><ReportFormPage /></ProtectedRoute>} />
           </Routes>
+          <BottomNav />
         </div>
       </HashRouter>
     </ThemeProvider>
