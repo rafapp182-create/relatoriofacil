@@ -4,6 +4,16 @@ export type Shift = 'A' | 'B' | 'C' | 'D';
 export type WorkCenter = 'SC108HH' | 'SC118HH' | 'SC103HH' | 'SC105HH' | 'SC117HH';
 export type ReportType = 'template' | 'report' | 'shift_start';
 
+export interface User {
+  username: string;
+  password: string;
+}
+
+export interface UserSession {
+  username: string;
+  loginTime: number;
+}
+
 export interface ReportPhoto {
   id: string;
   dataUrl: string;

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
-import { HashRouter, Routes, Route, useNavigate, useParams, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, useNavigate, useParams, useLocation, Navigate } from 'react-router-dom';
 import { 
   Plus, 
   ChevronLeft, 
@@ -10,7 +10,7 @@ import {
   Camera, 
   Image as ImageIcon,
   CheckCircle2,
-  User,
+  User as UserIcon,
   ArrowRight,
   ClipboardList,
   AlertTriangle,
@@ -34,10 +34,14 @@ import {
   UserPlus,
   MessageCircle,
   Play,
-  Save
+  Save,
+  Lock,
+  LogIn,
+  LogOut,
+  ArrowLeft
 } from 'lucide-react';
 import { storage } from './services/storage';
-import { Report, Shift, ReportType, ReportPhoto, WorkCenter } from './types';
+import { Report, Shift, ReportType, ReportPhoto, WorkCenter, UserSession, User } from './types';
 import { SHIFTS, WORK_CENTERS, TECHNICIANS_BY_SHIFT } from './constants';
 import { jsPDF } from 'jspdf';
 
@@ -45,6 +49,9 @@ import { jsPDF } from 'jspdf';
 const ThemeContext = createContext<{
   theme: 'light' | 'dark';
   toggleTheme: () => void;
+  user: UserSession | null;
+  login: (username: string) => void;
+  logout: () => void;
 } | null>(null);
 
 const useTheme = () => {
@@ -221,9 +228,10 @@ const sendToWhatsApp = (message: string) => {
 
 // --- Componentes de UI ---
 
-const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-  const { theme, toggleTheme } = useTheme();
+const Sidebar = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+  const { theme, toggleTheme, user, logout } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -240,6 +248,14 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, o
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleLogout = () => {
+    if (window.confirm("Deseja encerrar sua sessão?")) {
+      logout();
+      navigate('/login');
+      onClose();
+    }
   };
 
   return (
@@ -260,6 +276,18 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, o
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {user && (
+            <div className="px-4 py-3 mb-4 bg-blue-50 dark:bg-blue-900/10 rounded-2xl flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-black uppercase shadow-sm">
+                {user.username.charAt(0)}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-black text-blue-600 uppercase tracking-wider">Usuário Logado</span>
+                <span className="text-sm font-bold dark:text-white truncate max-w-[150px]">{user.username}</span>
+              </div>
+            </div>
+          )}
+
           <div className="px-4 py-2 text-[11px] font-black text-slate-400 uppercase tracking-widest">Aparência</div>
           
           <button onClick={toggleTheme} className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-dark-bg transition-all">
@@ -294,6 +322,18 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, o
             </div>
             <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleImport} />
           </button>
+
+          <div className="px-4 py-2 pt-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Sessão</div>
+          
+          <button onClick={handleLogout} className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl hover:bg-rose-50 dark:hover:bg-rose-900/10 transition-all">
+            <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center text-rose-600">
+              <LogOut className="w-5 h-5" />
+            </div>
+            <div className="flex flex-col text-left">
+              <span className="text-sm font-bold dark:text-white">Sair do App</span>
+              <span className="text-[10px] text-slate-500 uppercase font-black">Encerrar sessão local</span>
+            </div>
+          </button>
         </div>
 
         <div className="p-6 border-t dark:border-dark-border flex flex-col items-center gap-1">
@@ -310,14 +350,21 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, o
   );
 };
 
-const Button: React.FC<{
+const Button = ({ 
+  onClick, 
+  variant = 'primary', 
+  className = '', 
+  type = 'button', 
+  disabled, 
+  children 
+}: {
   onClick?: () => void;
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'success';
   className?: string;
   type?: 'button' | 'submit';
   disabled?: boolean;
-  children: React.ReactNode;
-}> = ({ onClick, variant = 'primary', className = '', type = 'button', disabled, children }) => {
+  children?: React.ReactNode;
+}) => {
   const base = "px-4 py-2 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:active:scale-100";
   const variants = {
     primary: "bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-none",
@@ -387,6 +434,148 @@ const CompactTextArea: React.FC<{
     />
   </div>
 );
+
+// --- Componente de Login ---
+const LoginPage = () => {
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const { login } = useTheme();
+  const navigate = useNavigate();
+
+  const handleAction = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    if (isRegistering) {
+      if (username.length < 3) return setErrorMsg('Nome deve ter 3+ caracteres');
+      if (password.length < 4) return setErrorMsg('Senha deve ter 4+ caracteres');
+      if (password !== confirmPassword) return setErrorMsg('Senhas não conferem');
+
+      const result = storage.registerUser({ username, password });
+      if (result.success) {
+        setSuccessMsg(result.message);
+        setTimeout(() => {
+          setIsRegistering(false);
+          setPassword('');
+          setConfirmPassword('');
+        }, 1500);
+      } else {
+        setErrorMsg(result.message);
+      }
+    } else {
+      const isValid = storage.authenticateUser({ username, password });
+      if (isValid) {
+        login(username);
+        navigate('/');
+      } else {
+        setErrorMsg('Usuário ou senha inválidos');
+      }
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-100 dark:bg-dark-bg flex items-center justify-center p-6 animate-in fade-in duration-500">
+      <div className="w-full max-w-md bg-white dark:bg-dark-card rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-dark-border overflow-hidden">
+        <div className="bg-blue-600 p-8 flex flex-col items-center text-white relative">
+          {isRegistering && (
+            <button 
+              onClick={() => setIsRegistering(false)} 
+              className="absolute left-6 top-8 p-2 bg-white/10 rounded-xl active:scale-90 transition-all"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+          <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-4">
+            {isRegistering ? <UserPlus className="w-8 h-8 text-white" /> : <Lock className="w-8 h-8 text-white" />}
+          </div>
+          <h2 className="text-2xl font-black tracking-tight">ReportMaster</h2>
+          <p className="text-blue-100 text-xs font-bold uppercase tracking-widest mt-1">
+            {isRegistering ? 'Criar Nova Conta' : 'Acesso Restrito'}
+          </p>
+        </div>
+        
+        <form onSubmit={handleAction} className="p-8 space-y-6">
+          <div className="space-y-4">
+            <CompactInput 
+              label="Nome de Usuário" 
+              value={username} 
+              onChange={setUsername} 
+              placeholder="Digite seu nome..." 
+              required 
+              icon={<UserIcon className="w-4 h-4" />}
+            />
+            <CompactInput 
+              label="Senha de Acesso" 
+              type="password"
+              value={password} 
+              onChange={setPassword} 
+              placeholder="Sua senha..." 
+              required 
+              icon={<LogIn className="w-4 h-4" />}
+            />
+            {isRegistering && (
+              <CompactInput 
+                label="Confirmar Senha" 
+                type="password"
+                value={confirmPassword} 
+                onChange={setConfirmPassword} 
+                placeholder="Repita a senha..." 
+                required 
+                icon={<Check className="w-4 h-4" />}
+              />
+            )}
+          </div>
+          
+          {errorMsg && (
+            <div className="bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-900/30 p-3 rounded-xl flex items-center gap-2 text-rose-600 text-[10px] font-black uppercase tracking-wider animate-in shake duration-300">
+              <AlertTriangle className="w-4 h-4" />
+              {errorMsg}
+            </div>
+          )}
+
+          {successMsg && (
+            <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-900/30 p-3 rounded-xl flex items-center gap-2 text-emerald-600 text-[10px] font-black uppercase tracking-wider animate-in fade-in duration-300">
+              <CheckCircle2 className="w-4 h-4" />
+              {successMsg}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-3">
+            <Button type="submit" className="w-full h-14 rounded-2xl text-base shadow-xl shadow-blue-200 dark:shadow-none">
+              {isRegistering ? 'Criar Conta' : 'Entrar no Aplicativo'}
+            </Button>
+            
+            {!isRegistering && (
+              <button 
+                type="button" 
+                onClick={() => setIsRegistering(true)}
+                className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest p-2 hover:opacity-70 transition-all"
+              >
+                Não tem uma conta? Criar Agora
+              </button>
+            )}
+          </div>
+          
+          <p className="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">
+            Sua conta é armazenada localmente.<br/>S11D - Serra Sul
+          </p>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// --- Componente de Rota Protegida ---
+const ProtectedRoute = ({ children }: { children?: React.ReactNode }) => {
+  const { user } = useTheme();
+  if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+};
 
 // --- Editor de Imagem ---
 const ImageEditor: React.FC<{
@@ -678,24 +867,15 @@ const ReportFormPage = () => {
     }
   }, [id]);
 
-  // Implementação de Autosave: sempre que o formData mudar, salva no localStorage
-  // Se for um template NOVO (ainda sem descrição ou atividade), esperamos até que o usuário insira algo
   useEffect(() => {
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-
-    // Só auto-salva se for um relatório em andamento ou se for um template já iniciado
     const shouldAutoSave = formData.type === 'report' || (formData.type === 'template' && (formData.omDescription || formData.activityExecuted));
-
     if (shouldAutoSave) {
       autoSaveTimerRef.current = window.setTimeout(() => {
         storage.saveReport({ ...formData, updatedAt: Date.now() } as Report);
-        console.log("Autosave executado.");
-      }, 1000); // 1 segundo de debounce
+      }, 1000);
     }
-
-    return () => {
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    };
+    return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
   }, [formData]);
 
   const validate = (): string[] => {
@@ -731,24 +911,11 @@ const ReportFormPage = () => {
       return;
     }
     
-    // Se estivermos iniciando um relatório a partir de um modelo
     if (saveType === 'report' && formData.type === 'template') {
-      // 1. Atualiza o modelo atual (autosave já cuida mas garantimos aqui)
       const templateToUpdate = { ...formData, type: 'template', updatedAt: Date.now() } as Report;
       storage.saveReport(templateToUpdate);
-      
-      // 2. Cria uma CÓPIA do modelo para o novo relatório de execução
-      const newReportEntry = { 
-        ...formData, 
-        id: crypto.randomUUID(), 
-        type: 'report', 
-        date: new Date().toISOString().split('T')[0], // Reseta para hoje
-        updatedAt: Date.now(), 
-        createdAt: Date.now() 
-      } as Report;
+      const newReportEntry = { ...formData, id: crypto.randomUUID(), type: 'report', date: new Date().toISOString().split('T')[0], updatedAt: Date.now(), createdAt: Date.now() } as Report;
       storage.saveReport(newReportEntry);
-      
-      // 3. Navega para a edição do novo relatório
       navigate(`/edit/${newReportEntry.id}`, { replace: true });
     } else {
       const finalReport = { ...formData, type: saveType, updatedAt: Date.now() } as Report;
@@ -922,7 +1089,6 @@ AUTOMAÇÃO MINA SERRA SUL
     addDataRow("Centro de Trabalho", formData.workCenter!);
     addDataRow("Equipe Técnica Envolvida", formData.technicians!, 60);
     
-    // Rodapé da primeira página
     addFooter();
 
     if (formData.photos?.length) {
@@ -944,13 +1110,7 @@ AUTOMAÇÃO MINA SERRA SUL
         const xPos = margin + (col * 92);
         doc.setDrawColor(226, 232, 240);
         doc.rect(xPos, y, 88, 72);
-        
-        try { 
-          doc.addImage(p.dataUrl, 'JPEG', xPos + 1, y + 1, 86, 60, undefined, 'FAST'); 
-        } catch (e) {
-          console.error("Erro ao adicionar imagem ao PDF", e);
-        }
-        
+        try { doc.addImage(p.dataUrl, 'JPEG', xPos + 1, y + 1, 86, 60, undefined, 'FAST'); } catch (e) {}
         if (p.caption) {
           doc.setFillColor(248, 250, 252);
           doc.rect(xPos + 1, y + 62, 86, 9, 'F');
@@ -960,14 +1120,10 @@ AUTOMAÇÃO MINA SERRA SUL
           const captionLines = doc.splitTextToSize(stripSpecialChars(p.caption), 82);
           doc.text(captionLines, xPos + 3, y + 66.5);
         }
-        
-        if (col === 1 || i === formData.photos!.length - 1) {
-          y += 78;
-        }
+        if (col === 1 || i === formData.photos!.length - 1) { y += 78; }
       });
       addFooter();
     }
-
     doc.save(`RELATORIO_OM_${formData.omNumber || 'PENDENTE'}.pdf`);
   };
 
@@ -1194,7 +1350,6 @@ AUTOMAÇÃO MINA SERRA SUL
                   }} />
                </button>
              </div>
-             
              <div className="space-y-4">
                {formData.photos?.map(p => (
                  <div key={p.id} className="bg-slate-50 dark:bg-dark-bg p-3 rounded-2xl border border-slate-200 dark:border-dark-border flex gap-3 shadow-sm">
@@ -1214,7 +1369,6 @@ AUTOMAÇÃO MINA SERRA SUL
              </div>
           </div>
 
-          {/* Opções de Exportação */}
           {formData.type === 'report' && (
             <div className="grid grid-cols-2 gap-3 pt-4 border-t dark:border-dark-border">
               <Button onClick={generatePDF} variant="secondary" className="h-12 text-xs uppercase tracking-widest col-span-2 shadow-sm">
@@ -1245,8 +1399,9 @@ AUTOMAÇÃO MINA SERRA SUL
 
 // --- Main App ---
 
-const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const ThemeProvider = ({ children }: { children?: React.ReactNode }) => {
   const [theme, setTheme] = useState<'light' | 'dark'>(storage.getTheme());
+  const [user, setUser] = useState<UserSession | null>(storage.getSession());
 
   useEffect(() => {
     if (theme === 'dark') document.documentElement.classList.add('dark');
@@ -1256,8 +1411,19 @@ const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
+  const login = (username: string) => {
+    const session = { username, loginTime: Date.now() };
+    setUser(session);
+    storage.setSession(session);
+  };
+
+  const logout = () => {
+    setUser(null);
+    storage.logout();
+  };
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, user, login, logout }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -1269,9 +1435,10 @@ const App = () => {
       <HashRouter>
         <div className="min-h-screen bg-slate-50 dark:bg-dark-bg flex flex-col transition-colors">
           <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/new" element={<ReportFormPage />} />
-            <Route path="/edit/:id" element={<ReportFormPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+            <Route path="/new" element={<ProtectedRoute><ReportFormPage /></ProtectedRoute>} />
+            <Route path="/edit/:id" element={<ProtectedRoute><ReportFormPage /></ProtectedRoute>} />
           </Routes>
         </div>
       </HashRouter>

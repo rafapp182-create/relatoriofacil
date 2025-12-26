@@ -1,9 +1,11 @@
 
-import { Report } from '../types';
+import { Report, UserSession, User } from '../types';
 
 const STORAGE_KEY = 'report_master_om_data';
 const SHIFT_TEMPLATES_KEY = 'report_master_shift_templates';
 const THEME_KEY = 'report_master_theme';
+const AUTH_KEY = 'report_master_auth';
+const USERS_KEY = 'report_master_registered_users';
 
 export const storage = {
   getReports: (): Report[] => {
@@ -33,6 +35,48 @@ export const storage = {
     const reports = storage.getReports();
     const filtered = reports.filter((r) => r.id !== id);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+  },
+
+  // Auth Management
+  getUsers: (): User[] => {
+    try {
+      const data = localStorage.getItem(USERS_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      return [];
+    }
+  },
+
+  registerUser: (newUser: User): { success: boolean; message: string } => {
+    const users = storage.getUsers();
+    if (users.find(u => u.username.toLowerCase() === newUser.username.toLowerCase())) {
+      return { success: false, message: 'Este nome de usuário já existe.' };
+    }
+    users.push(newUser);
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    return { success: true, message: 'Usuário cadastrado com sucesso!' };
+  },
+
+  authenticateUser: (credentials: User): boolean => {
+    const users = storage.getUsers();
+    const found = users.find(u => 
+      u.username.toLowerCase() === credentials.username.toLowerCase() && 
+      u.password === credentials.password
+    );
+    return !!found;
+  },
+
+  setSession: (session: UserSession): void => {
+    localStorage.setItem(AUTH_KEY, JSON.stringify(session));
+  },
+
+  getSession: (): UserSession | null => {
+    const data = localStorage.getItem(AUTH_KEY);
+    return data ? JSON.parse(data) : null;
+  },
+
+  logout: (): void => {
+    localStorage.removeItem(AUTH_KEY);
   },
 
   // Shift Start Templates
@@ -73,7 +117,6 @@ export const storage = {
         }
         return true;
       } else if (Array.isArray(parsed)) {
-        // Fallback para formato antigo
         localStorage.setItem(STORAGE_KEY, jsonString);
         return true;
       }
