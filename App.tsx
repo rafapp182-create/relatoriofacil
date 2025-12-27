@@ -716,6 +716,7 @@ const HomePage = () => {
     if (state?.tab) setActiveTab(state.tab);
   }, [location]);
 
+  // Sincronização robusta da lista de relatórios baseada na troca de grupo ou aba
   useEffect(() => {
     const allReports = storage.getReports();
     setReports(allReports.sort((a, b) => b.updatedAt - a.updatedAt));
@@ -724,7 +725,7 @@ const HomePage = () => {
     if (savedTemplates) {
       setShiftTemplates(savedTemplates);
     }
-  }, []);
+  }, [activeGroup, activeTab]);
 
   const handleDelete = (e: React.BaseSyntheticEvent, id: string) => {
     e.preventDefault(); e.stopPropagation();
@@ -748,7 +749,7 @@ const HomePage = () => {
     }
   };
 
-  // Filtragem por Tipo de Aba E pelo Grupo Ativo (Truckless ou Automação)
+  // Filtragem por Tipo de Aba E pelo Grupo Ativo (Truckless, Automação ou Embarcados)
   const filteredReports = reports.filter(r => r.type === activeTab && r.group === activeGroup);
 
   return (
@@ -1264,7 +1265,7 @@ AUTOMAÇÃO MINA SERRA SUL
           <div className="bg-white dark:bg-dark-card border-2 border-blue-500/20 p-4 rounded-3xl flex items-center gap-4 shadow-sm">
              <div className="bg-blue-500/10 p-3 rounded-2xl"><ClipboardList className="w-6 h-6 text-blue-600" /></div>
              <div className="flex flex-col">
-                <span className="font-black text-xs uppercase text-blue-700 dark:text-blue-400">Novo Modelo ({activeGroup})</span>
+                <span className="font-black text-xs uppercase text-blue-700 dark:text-blue-400">Novo Modelo ({formData.group})</span>
                 <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Preencha o escopo da atividade base.</p>
              </div>
           </div>
