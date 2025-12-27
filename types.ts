@@ -3,7 +3,6 @@ export type ActivityType = 'preventiva' | 'corretiva';
 export type Shift = 'A' | 'B' | 'C' | 'D';
 export type WorkCenter = 'SC108HH' | 'SC118HH' | 'SC103HH' | 'SC105HH' | 'SC117HH';
 export type ReportType = 'template' | 'report' | 'shift_start';
-export type Group = 'TRUCKLESS' | 'AUTOMAÇÃO' | 'EMBARCADOS';
 
 export interface User {
   username: string;
@@ -25,7 +24,6 @@ export interface ReportPhoto {
 export interface Report {
   id: string;
   type: ReportType;
-  group: Group;
   omDescription: string;
   activityExecuted: string;
   date: string;
