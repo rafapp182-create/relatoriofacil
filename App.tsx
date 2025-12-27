@@ -214,8 +214,6 @@ Renato`
 // --- Utilitários ---
 const stripSpecialChars = (text: string) => {
   if (!text) return "";
-  // Normaliza e remove acentos, mas mantém caracteres latinos básicos e pontuação comum.
-  // Remove especificamente o que o jsPDF (Helvetica) não consegue renderizar (Unicode estendido e emojis do texto bruto).
   return text
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -890,7 +888,7 @@ const ReportFormPage = () => {
   const [formData, setFormData] = useState<Partial<Report>>({
     id: crypto.randomUUID(), 
     type: 'template',
-    group: activeGroup, // Herda o grupo ativo
+    group: activeGroup, 
     omDescription: '', 
     activityExecuted: '', 
     date: new Date().toISOString().split('T')[0], 
@@ -1063,6 +1061,37 @@ AUTOMAÇÃO MINA SERRA SUL
       return false;
     };
 
+    // Helper para desenhar blocos de texto que podem conter emojis no início da linha
+    const drawTextWithEmojiSupport = (text: string, x: number, startY: number, maxWidth: number) => {
+      const lines = text.split('\n');
+      let currentY = startY;
+      
+      lines.forEach(line => {
+        const trimmedLine = line.trim();
+        // Regex para detectar emoji no início
+        const emojiMatch = trimmedLine.match(/^([\uD800-\uDBFF][\uDC00-\uDFFF]|\u2705|\u2714|\u24C2|[\u2B50\u2B55\u231A\u231B\u23E9-\u23EC\u23F0\u23F3\u25FD\u25FE\u2600-\u2604\u260E\u2611\u2614\u2615\u2618\u261D\u2620\u2622\u2623\u2626\u262A\u262E\u262F\u2638-\u263A\u2640\u2642\u2648-\u2653\u2660\u2663\u2665\u2666\u2668\u267B\u267F\u2692-\u2694\u2696\u2697\u2699\u269B\u269C\u26A0\u26A1\u26AA\u26AB\u26B0\u26B1\u26BD\u26BE\u26C4\u26C5\u26C8\u26CE\u26CF\u26D1\u26D3\u26D4\u26E9\u26EA\u26F2\u26F3\u26F5\u26FA\u26FD\u2702\u2708\u2709\u270F\u2712\u2716\u271D\u2721\u2728\u2733\u2734\u2744\u2747\u274C\u274E\u2753-\u2755\u2757\u2763\u2764\u2795-\u2797\u27A1\u27B0\u27BF\u2934\u2935\u2B05-\u2B07\u2B1B\u2B1C\u2B50\u2B55\u3030\u303D\u3297\u3299])\s*(.*)/);
+        
+        let content = line;
+        let xOffset = 0;
+        
+        if (emojiMatch) {
+          const emoji = emojiMatch[1];
+          content = emojiMatch[2];
+          drawPDFEmoji(emoji, x, currentY + 0.5, 4);
+          xOffset = 6;
+        }
+
+        const wrapped = doc.splitTextToSize(stripSpecialChars(content), maxWidth - xOffset);
+        wrapped.forEach((wLine: string) => {
+          if (currentY > 275) { addFooter(); doc.addPage(); currentY = 20; }
+          doc.text(wLine, x + xOffset, currentY);
+          currentY += 5;
+        });
+        currentY += 2; // Pequeno gap entre parágrafos
+      });
+      return currentY;
+    };
+
     doc.setFillColor(37, 99, 235);
     doc.rect(0, 0, 210, 40, 'F');
     doc.setTextColor(255, 255, 255);
@@ -1082,19 +1111,17 @@ AUTOMAÇÃO MINA SERRA SUL
     doc.setFontSize(14);
     doc.text(stripSpecialChars(formData.omNumber || "8000XXXX"), 145, 26);
 
-    doc.setTextColor(30, 41, 59); // slate-800
+    doc.setTextColor(30, 41, 59);
     y = 55;
 
     const addSectionHeader = (title: string, emoji = "") => {
       doc.setFillColor(241, 245, 249);
       doc.rect(margin, y - 5, 180, 8, 'F');
-      
       let xOffset = margin + 3;
       if (emoji) {
         drawPDFEmoji(emoji, xOffset, y + 0.5, 4.5);
         xOffset += 6;
       }
-
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
       doc.setTextColor(30, 41, 59);
@@ -1102,18 +1129,16 @@ AUTOMAÇÃO MINA SERRA SUL
       y += 12;
     };
 
-    const addDataRow = (label: string, value: string | boolean, xOffset = 0, labelEmoji = "") => {
+    const addDataRow = (label: string, value: string | boolean, xOffset = 0, emoji = "") => {
       let xPos = margin + xOffset;
-      if (labelEmoji) {
-        drawPDFEmoji(labelEmoji, xPos, y - 1, 3.5);
+      if (emoji) {
+        drawPDFEmoji(emoji, xPos, y - 1, 3.5);
         xPos += 5;
       }
-
       doc.setFont("helvetica", "bold");
       doc.setFontSize(7);
       doc.setTextColor(100, 116, 139);
       doc.text(stripSpecialChars(label).toUpperCase(), xPos, y);
-      
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
       doc.setTextColor(30, 41, 59);
@@ -1146,9 +1171,8 @@ AUTOMAÇÃO MINA SERRA SUL
     y += 4;
     doc.setTextColor(30, 41, 59);
     doc.setFontSize(10);
-    const descLines = doc.splitTextToSize(stripSpecialChars(formData.omDescription!), 180);
-    doc.text(descLines, margin, y);
-    y += (descLines.length * 5) + 6;
+    y = drawTextWithEmojiSupport(formData.omDescription!, margin, y, 180);
+    y += 6;
 
     drawPDFEmoji("📈", margin, y - 1, 3.5);
     doc.setFontSize(7);
@@ -1157,26 +1181,8 @@ AUTOMAÇÃO MINA SERRA SUL
     y += 4;
     doc.setTextColor(30, 41, 59);
     doc.setFontSize(10);
-    
-    // Processamento especial para listas com checkmarks (✅)
-    const execText = formData.activityExecuted || "";
-    const execLinesArr = execText.split('\n');
-    execLinesArr.forEach(line => {
-      const isCheck = line.trim().startsWith('✅');
-      const cleanLine = line.trim().replace(/^✅/, '').trim();
-      const wrappedLines = doc.splitTextToSize(stripSpecialChars(cleanLine), 170);
-      
-      wrappedLines.forEach((wLine: string, idx: number) => {
-        if (y > 270) { addFooter(); doc.addPage(); y = 20; }
-        if (isCheck && idx === 0) {
-          drawPDFEmoji("✅", margin, y + 1, 4);
-        }
-        doc.text(wLine, isCheck ? margin + 6 : margin, y);
-        y += 5;
-      });
-      y += 2;
-    });
-    y += 8;
+    y = drawTextWithEmojiSupport(formData.activityExecuted!, margin, y, 180);
+    y += 10;
 
     addSectionHeader("STATUS FINAL E EQUIPE", "🏁");
     addDataRow("Status OM", formData.isFinished ? "CONCLUIDA" : "EM ANDAMENTO", 0, "🎯");
@@ -1199,11 +1205,7 @@ AUTOMAÇÃO MINA SERRA SUL
       y += 10;
 
       formData.photos.forEach((p, i) => {
-        if (y > 230) { 
-          addFooter();
-          doc.addPage(); 
-          y = 20; 
-        }
+        if (y > 230) { addFooter(); doc.addPage(); y = 20; }
         const col = i % 2;
         const xPos = margin + (col * 92);
         doc.setDrawColor(226, 232, 240);
@@ -1242,7 +1244,6 @@ AUTOMAÇÃO MINA SERRA SUL
       {editingPhoto && <ImageEditor photo={editingPhoto} onSave={saveMarkedPhoto} onCancel={() => setEditingPhoto(null)} />}
 
       <div className="p-4 max-w-2xl mx-auto flex flex-col gap-4">
-        {/* Seletor de Grupo Dinâmico */}
         <div className="bg-white dark:bg-dark-card p-1 rounded-2xl flex shadow-sm border dark:border-dark-border overflow-hidden">
           {GROUPS.map(g => {
             const isActive = formData.group === g;
@@ -1283,31 +1284,25 @@ AUTOMAÇÃO MINA SERRA SUL
 
         <div className="bg-white dark:bg-dark-card rounded-[2rem] border border-slate-200 dark:border-dark-border shadow-md overflow-hidden p-5 space-y-6">
           
-          {/* 1. Identificação */}
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <div className="h-4 w-1 bg-blue-600 rounded-full" />
               <h3 className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">📍 Identificação</h3>
             </div>
-            
             <div className="grid grid-cols-2 gap-3">
               <CompactInput label="🗓️ Data" type="date" value={formData.date!} onChange={v => setFormData(p => ({...p, date: v}))} required disabled={isNew} icon={<Calendar className="w-4 h-4" />} />
               <CompactInput label="🚜 Equipamento" value={formData.equipment!} onChange={v => setFormData(p => ({...p, equipment: v}))} required placeholder="Ex: PC200" disabled={isNew} icon={<Zap className="w-4 h-4" />} />
             </div>
-            
             <CompactInput label="📌 Local" value={formData.local!} onChange={v => setFormData(p => ({...p, local: v}))} required placeholder="Qual o local da atividade?" disabled={isNew} icon={<MapPin className="w-4 h-4" />} />
           </div>
 
-          {/* 2. Ordem de Manutenção */}
           <div className="flex flex-col gap-4 pt-4 border-t dark:border-dark-border">
             <div className="flex items-center gap-2">
               <div className="h-4 w-1 bg-indigo-600 rounded-full" />
               <h3 className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">📂 Manutenção</h3>
             </div>
-
             <div className="grid grid-cols-2 gap-3">
               <CompactInput label="📂 N° OM" value={formData.omNumber!} onChange={v => setFormData(p => ({...p, omNumber: v}))} required placeholder="Número OM" disabled={isNew} icon={<Hash className="w-4 h-4" />} />
-
               <div className={`flex flex-col gap-1 ${isNew ? 'opacity-60' : ''}`}>
                 <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🛠️ Tipo</label>
                 <select disabled={isNew} value={formData.activityType} onChange={e => setFormData(p => ({...p, activityType: e.target.value as any}))} className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-dark-border bg-white dark:bg-dark-card dark:text-white text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-blue-100">
@@ -1318,18 +1313,15 @@ AUTOMAÇÃO MINA SERRA SUL
             </div>
           </div>
 
-          {/* 3. Horários e IAMO */}
           <div className="flex flex-col gap-4 pt-4 border-t dark:border-dark-border">
             <div className="flex items-center gap-2">
               <div className="h-4 w-1 bg-amber-600 rounded-full" />
               <h3 className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">⏰ Horários / IAMO</h3>
             </div>
-
             <div className="grid grid-cols-2 gap-3">
               <CompactInput label="⏰ Início" type="time" value={formData.startTime!} onChange={v => setFormData(p => ({...p, startTime: v}))} required disabled={isNew} />
               <CompactInput label="⏰ Término" type="time" value={formData.endTime!} onChange={v => setFormData(p => ({...p, endTime: v}))} required disabled={isNew} />
             </div>
-
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🛑 Desvio IAMO?</label>
               <button disabled={isNew} onClick={() => setFormData(p => ({...p, iamoDeviation: !p.iamoDeviation}))} className={`w-full py-3 rounded-xl text-[11px] font-black transition-all border-2 flex items-center justify-center gap-2 ${formData.iamoDeviation ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-500 text-rose-600' : 'bg-slate-50 dark:bg-dark-bg border-slate-200 dark:border-dark-border text-slate-400'}`}>
@@ -1341,25 +1333,20 @@ AUTOMAÇÃO MINA SERRA SUL
             )}
           </div>
 
-          {/* 4. Escopo e Execução */}
           <div className="flex flex-col gap-4 pt-4 border-t dark:border-dark-border">
             <div className="flex items-center gap-2">
               <div className="h-4 w-1 bg-emerald-600 rounded-full" />
               <h3 className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">📝 Detalhamento</h3>
             </div>
-
             <CompactTextArea label="♻️ Descrição da OM" value={formData.omDescription!} onChange={v => setFormData(p => ({...p, omDescription: v}))} required placeholder="Escopo planejado..." rows={3} />
-            
             <CompactTextArea label="📈 Atividades Realizadas" value={formData.activityExecuted!} onChange={v => setFormData(p => ({...p, activityExecuted: v}))} required rows={6} placeholder="O que foi executado na prática?" />
           </div>
 
-          {/* 5. Fechamento e Equipe */}
           <div className={`flex flex-col gap-4 pt-4 border-t dark:border-dark-border ${isNew ? 'opacity-40 pointer-events-none' : ''}`}>
             <div className="flex items-center gap-2">
               <div className="h-4 w-1 bg-rose-600 rounded-full" />
               <h3 className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">🏁 Finalização</h3>
             </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🎯 Concluída?</label>
@@ -1377,7 +1364,6 @@ AUTOMAÇÃO MINA SERRA SUL
             {formData.hasPendencies && (
               <CompactTextArea label="📝 Relatório de Pendência" value={formData.pendencyDescription!} onChange={v => setFormData(p => ({...p, pendencyDescription: v}))} required placeholder="Descreva as pendências..." rows={2} />
             )}
-
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">📈 Turno</label>
@@ -1392,7 +1378,6 @@ AUTOMAÇÃO MINA SERRA SUL
                 </select>
               </div>
             </div>
-
             <div className="flex flex-col gap-3">
               <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">👥 Equipe Envolvida</label>
               <div className="flex flex-wrap gap-2">
@@ -1406,7 +1391,6 @@ AUTOMAÇÃO MINA SERRA SUL
                   );
                 })}
               </div>
-
               <div className="flex flex-wrap gap-2">
                 {formData.technicians?.split(', ').filter(name => name && !TECHNICIANS_BY_SHIFT[formData.teamShift! || 'A'].includes(name)).map(name => (
                   <button key={name} onClick={() => toggleTechnician(name)} className="px-3 py-2 rounded-xl text-xs font-bold border-2 transition-all flex items-center gap-2 bg-indigo-600 border-indigo-600 text-white shadow-md">
@@ -1415,29 +1399,17 @@ AUTOMAÇÃO MINA SERRA SUL
                   </button>
                 ))}
               </div>
-
               <div className="flex gap-2 items-end mt-1">
                 <div className="flex-1">
-                  <CompactInput 
-                    label="👤 Adicionar Outro Técnico" 
-                    value={customTechnician} 
-                    onChange={setCustomTechnician} 
-                    placeholder="Nome completo..."
-                    icon={<UserPlus className="w-4 h-4" />}
-                  />
+                  <CompactInput label="👤 Adicionar Outro Técnico" value={customTechnician} onChange={setCustomTechnician} placeholder="Nome completo..." icon={<UserPlus className="w-4 h-4" />} />
                 </div>
-                <button 
-                  onClick={addCustomTechnician} 
-                  disabled={!customTechnician.trim()}
-                  className="bg-slate-100 dark:bg-dark-bg p-2.5 rounded-xl text-blue-600 disabled:opacity-40 active:scale-90 transition-all border border-slate-200 dark:border-dark-border"
-                >
+                <button onClick={addCustomTechnician} disabled={!customTechnician.trim()} className="bg-slate-100 dark:bg-dark-bg p-2.5 rounded-xl text-blue-600 disabled:opacity-40 active:scale-90 transition-all border border-slate-200 dark:border-dark-border">
                   <Plus className="w-6 h-6" />
                 </button>
               </div>
             </div>
           </div>
 
-          {/* 6. Evidências (Fotos) */}
           <div className={`flex flex-col gap-4 pt-4 border-t dark:border-dark-border ${isNew ? 'opacity-40 pointer-events-none' : ''}`}>
              <div className="flex items-center gap-2">
                <div className="h-4 w-1 bg-purple-600 rounded-full" />
@@ -1516,30 +1488,21 @@ AUTOMAÇÃO MINA SERRA SUL
   );
 };
 
-// --- Bottom Navigation Component ---
 const BottomNav = () => {
   const { activeGroup, setActiveGroup } = useTheme();
   const location = useLocation();
   const isHome = location.pathname === '/';
-
   if (!isHome) return null;
-
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 px-6 pb-8 pt-4 bg-gradient-to-t from-white via-white/95 to-transparent dark:from-dark-bg dark:via-dark-bg/95 dark:to-transparent pointer-events-none">
       <div className="max-w-md mx-auto bg-white/80 dark:bg-dark-card/80 backdrop-blur-xl rounded-[2.5rem] p-2 flex shadow-2xl border border-slate-200/50 dark:border-dark-border/50 pointer-events-auto overflow-hidden">
         {GROUPS.map((group) => {
           const isActive = activeGroup === group;
           return (
-            <button
-              key={group}
-              onClick={() => setActiveGroup(group)}
-              className={`flex-1 relative flex flex-col items-center justify-center gap-1 py-4 transition-all duration-300 rounded-[2rem] ${isActive ? 'bg-blue-600 text-white shadow-xl scale-105' : 'text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-dark-bg'}`}
-            >
+            <button key={group} onClick={() => setActiveGroup(group)} className={`flex-1 relative flex flex-col items-center justify-center gap-1 py-4 transition-all duration-300 rounded-[2rem] ${isActive ? 'bg-blue-600 text-white shadow-xl scale-105' : 'text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-dark-bg'}`}>
               {getGroupIcon(group, `w-6 h-6 ${isActive ? 'scale-110' : ''} transition-transform`)}
               <span className="text-[10px] font-black uppercase tracking-widest">{group}</span>
-              {isActive && (
-                <div className="absolute -bottom-1 w-1 h-1 bg-white rounded-full" />
-              )}
+              {isActive && <div className="absolute -bottom-1 w-1 h-1 bg-white rounded-full" />}
             </button>
           );
         })}
@@ -1548,32 +1511,25 @@ const BottomNav = () => {
   );
 };
 
-// --- Main App ---
-
 const ThemeProvider = ({ children }: { children?: React.ReactNode }) => {
   const [theme, setTheme] = useState<'light' | 'dark'>(storage.getTheme());
   const [user, setUser] = useState<UserSession | null>(storage.getSession());
   const [activeGroup, setActiveGroup] = useState<Group>('TRUCKLESS');
-
   useEffect(() => {
     if (theme === 'dark') document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
     storage.setTheme(theme);
   }, [theme]);
-
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
-
   const login = (username: string) => {
     const session = { username, loginTime: Date.now() };
     setUser(session);
     storage.setSession(session);
   };
-
   const logout = () => {
     setUser(null);
     storage.logout();
   };
-
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, user, login, logout, activeGroup, setActiveGroup }}>
       {children}
