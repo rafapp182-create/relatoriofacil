@@ -70,36 +70,12 @@ const useTheme = () => {
   return context;
 };
 
-// --- Modelos de Início de Turno Padrão ---
+// --- Modelos de Início de Turno Padrão (Limpos) ---
 const DEFAULT_SHIFT_TEMPLATES = {
-  'A': `📣 Evento: Boa Jornada ✅  
-📋 Tema: Atividades relacionadas ao turno.
-📍 Local: Contêiner Automação de Mina
-🗓 Data: {{date}}
-⛑ Palestrantes: Todos
-📈 Realizado o DSS com equipe do Turno D
-🗣️ Participantes Equipe SONDA/SOTREQ/HEXAGON/CREARE`,
-  'B': `📣 Evento: Boa Jornada ✅  
-📋 Tema: Atividades relacionadas ao turno.
-📍 Local: Contêiner Automação de Mina
-🗓 Data: {{date}}
-⛑ Palestrantes: Todos
-📈 Realizado o DSS com equipe do turno B
-🗣️ Participantes Equipe SONDA/SOTREQ/HEXAGON/ALCON/CREARE`,
-  'C': `📣 Evento: Boa Jornada ✅  
-📋 Tema: Atividades relacionadas ao turno.
-📍 Local: Contêiner Automação de Mina
-🗓 Data: {{date}}
-⛑ Palestrantes: Todos
-📈 Realizado o DSS com equipe do Turno C
-🗣️ Participantes Equipe SONDA/SOTREQ/HEXAGON/CREARE`,
-  'D': `📣 Evento: Boa Jornada ✅  
-📋 Tema: Atividades relacionadas ao turno.
-📍 Local: Contêiner Automação de Mina
-🗓 Data: {{date}}
-⛑ Palestrantes: Todos
-📈 Realizado o DSS com equipe do Turno D
-🗣️ Participantes Equipe SONDA/SOTREQ/HEXAGON/CREARE`
+  'A': `📣 INÍCIO DE TURNO - EQUIPE A\n🗓 Data: {{date}}\n\n📋 Tema DSS:\n📍 Local:\n⛑ Palestrante:\n📈 Atividades:\n🗣️ Participantes:`,
+  'B': `📣 INÍCIO DE TURNO - EQUIPE B\n🗓 Data: {{date}}\n\n📋 Tema DSS:\n📍 Local:\n⛑ Palestrante:\n📈 Atividades:\n🗣️ Participantes:`,
+  'C': `📣 INÍCIO DE TURNO - EQUIPE C\n🗓 Data: {{date}}\n\n📋 Tema DSS:\n📍 Local:\n⛑ Palestrante:\n📈 Atividades:\n🗣️ Participantes:`,
+  'D': `📣 INÍCIO DE TURNO - EQUIPE D\n🗓 Data: {{date}}\n\n📋 Tema DSS:\n📍 Local:\n⛑ Palestrante:\n📈 Atividades:\n🗣️ Participantes:`
 };
 
 // --- Utilitários ---
@@ -1406,7 +1382,7 @@ ${formData.activityExecuted || ''}
                <button onClick={() => cameraInputRef.current?.click()} className="py-6 border-2 border-dashed rounded-[1.5rem] border-slate-300 dark:border-dark-border text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex flex-col items-center shadow-sm">
                   <Camera className="w-6 h-6 mb-2" />
                   <span className="text-[10px] font-black uppercase tracking-widest">Câmera</span>
-                  <input cameraInputRef={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => {
+                  <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => {
                     if (!e.target.files) return;
                     Array.from(e.target.files).forEach((file: File) => {
                       const reader = new FileReader();
