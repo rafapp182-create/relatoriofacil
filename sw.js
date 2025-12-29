@@ -1,5 +1,5 @@
 
-const CACHE_NAME = 'reportmaster-v2';
+const CACHE_NAME = 'reportmaster-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -9,17 +9,17 @@ const ASSETS_TO_CACHE = [
   'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'
 ];
 
-// Instalação: Cacheia ativos locais e globais conhecidos
+// Instalação: Cacheia ativos essenciais
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
-  self.skipWaiting();
+  self.skipWaiting(); // Força a ativação imediata
 });
 
-// Ativação: Limpa caches antigos
+// Ativação: Limpa caches obsoletos
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -32,45 +32,55 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
-  self.clients.claim();
+  self.clients.claim(); // Assume o controle das abas abertas imediatamente
 });
 
-// Interceptação: Cache Dinâmico para dependências ESM.sh e Fontes
+// Interceptação de requisições
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Estratégia Cache-First para bibliotecas externas (esm.sh) e Google Fonts
-  if (url.hostname === 'esm.sh' || url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com' || url.hostname === 'cdn.tailwindcss.com') {
+  // ESTRATÉGIA: NETWORK FIRST para o index.html e manifest
+  // Isso garante que se houver internet, ele baixe a versão nova.
+  if (event.request.mode === 'navigate' || url.pathname.endsWith('manifest.json')) {
     event.respondWith(
-      caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) return cachedResponse;
-        
-        return fetch(event.request).then((networkResponse) => {
-          return caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, networkResponse.clone());
-            return networkResponse;
-          });
+      fetch(event.request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // ESTRATÉGIA: CACHE FIRST para bibliotecas e fontes (raramente mudam)
+  if (url.hostname === 'esm.sh' || url.hostname === 'fonts.googleapis.com' || url.hostname === 'cdn.tailwindcss.com') {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        return cached || fetch(event.request).then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          return response;
         });
       })
     );
     return;
   }
 
-  // Estratégia Stale-While-Revalidate para o restante do app
+  // ESTRATÉGIA: STALE-WHILE-REVALIDATE para o restante
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request).then((networkResponse) => {
-        // Apenas cacheia se a resposta for válida
-        if (networkResponse && networkResponse.status === 200) {
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, networkResponse.clone());
-          });
-        }
-        return networkResponse;
-      }).catch(() => {
-        // Silenciosamente falha se estiver offline e sem cache
-      });
-      return cachedResponse || fetchPromise;
+    caches.match(event.request).then((cached) => {
+      const networked = fetch(event.request)
+        .then((response) => {
+          if (response.status === 200) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => null);
+      return cached || networked;
     })
   );
 });
