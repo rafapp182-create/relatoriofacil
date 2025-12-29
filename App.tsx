@@ -48,7 +48,8 @@ import {
   CheckSquare,
   Wifi,
   WifiOff,
-  RefreshCw
+  RefreshCw,
+  Search
 } from 'lucide-react';
 import { storage } from './services/storage';
 import { Report, Shift, ReportType, ReportPhoto, WorkCenter, UserSession, User } from './types';
@@ -618,6 +619,7 @@ const HomePage = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [activeTab, setActiveTab] = useState<ReportType>('template');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   
   const [shiftTemplates, setShiftTemplates] = useState<Record<string, string>>(DEFAULT_SHIFT_TEMPLATES);
   const [editingShift, setEditingShift] = useState<string | null>(null);
@@ -660,7 +662,15 @@ const HomePage = () => {
     }
   };
 
-  const filteredReports = reports.filter(r => r.type === activeTab);
+  const filteredReports = reports.filter(r => 
+    r.type === activeTab && 
+    (
+      r.omDescription?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.omNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.equipment?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.local?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  );
 
   return (
     <div className="flex flex-col gap-5 p-5 max-w-2xl mx-auto w-full pb-20">
@@ -685,10 +695,31 @@ const HomePage = () => {
       </header>
 
       <div className="bg-slate-200 dark:bg-dark-card p-1 rounded-xl flex shadow-inner overflow-x-auto gap-1">
-        <button onClick={() => setActiveTab('template')} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-[10px] font-black transition-all uppercase ${activeTab === 'template' ? 'bg-white dark:bg-dark-bg text-blue-600 shadow-sm' : 'text-slate-600 dark:text-slate-400 opacity-70'}`}>Meus Modelos</button>
-        <button onClick={() => setActiveTab('report')} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-[10px] font-black transition-all uppercase ${activeTab === 'report' ? 'bg-white dark:bg-dark-bg text-emerald-600 shadow-sm' : 'text-slate-600 dark:text-slate-400 opacity-70'}`}>Relatórios</button>
-        <button onClick={() => setActiveTab('shift_start')} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-[10px] font-black transition-all uppercase ${activeTab === 'shift_start' ? 'bg-white dark:bg-dark-bg text-purple-600 shadow-sm' : 'text-slate-600 dark:text-slate-400 opacity-70'}`}>Início de Turno</button>
+        <button onClick={() => { setActiveTab('template'); setSearchQuery(''); }} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-[10px] font-black transition-all uppercase ${activeTab === 'template' ? 'bg-white dark:bg-dark-bg text-blue-600 shadow-sm' : 'text-slate-600 dark:text-slate-400 opacity-70'}`}>Meus Modelos</button>
+        <button onClick={() => { setActiveTab('report'); setSearchQuery(''); }} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-[10px] font-black transition-all uppercase ${activeTab === 'report' ? 'bg-white dark:bg-dark-bg text-emerald-600 shadow-sm' : 'text-slate-600 dark:text-slate-400 opacity-70'}`}>Relatórios</button>
+        <button onClick={() => { setActiveTab('shift_start'); setSearchQuery(''); }} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-[10px] font-black transition-all uppercase ${activeTab === 'shift_start' ? 'bg-white dark:bg-dark-bg text-purple-600 shadow-sm' : 'text-slate-600 dark:text-slate-400 opacity-70'}`}>Início de Turno</button>
       </div>
+
+      {activeTab !== 'shift_start' && (
+        <div className="relative group animate-in fade-in slide-in-from-top-4 duration-500">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+          <input 
+            type="text" 
+            placeholder="Buscar por OM, equipamento ou local..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-11 pr-11 py-3 bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border rounded-2xl text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/20 transition-all shadow-sm dark:text-white"
+          />
+          {searchQuery && (
+            <button 
+              onClick={() => setSearchQuery('')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
 
       {activeTab === 'template' && (
         <Button onClick={() => navigate('/new')} className="h-14 rounded-xl text-base shadow-lg">
@@ -766,13 +797,14 @@ const HomePage = () => {
               <div className="flex items-center gap-4 mt-2 text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">
                 <span className="flex items-center gap-1.5"><Calendar className="w-3 h-3 text-blue-500" /> {new Date(report.date).toLocaleDateString('pt-BR')}</span>
                 <span className="flex items-center gap-1.5"><Briefcase className="w-3 h-3 text-blue-500" /> {report.activityType}</span>
+                {report.equipment && <span className="flex items-center gap-1.5 ml-auto text-blue-600"><Zap className="w-3 h-3" /> {report.equipment}</span>}
               </div>
               <button onClick={(e) => handleDelete(e, report.id)} className="absolute top-4 right-3 text-slate-300 dark:text-slate-600 hover:text-rose-600 transition-colors p-1"><Trash2 className="w-5 h-5" /></button>
             </div>
           ))}
           {filteredReports.length === 0 && (
              <div className="py-12 text-center text-slate-400 dark:text-slate-500 text-xs font-bold border-2 border-dashed border-slate-200 dark:border-dark-border rounded-3xl opacity-60">
-               Nenhum item encontrado.
+               {searchQuery ? 'Nenhum resultado para sua busca.' : 'Nenhum item encontrado.'}
              </div>
           )}
         </div>
