@@ -1043,12 +1043,12 @@ const ReportFormPage = () => {
       y += 20;
     }
 
-    // Status de Conclusão Final
+    // Status de Conclusão Final (Fixado em CONCLUÍDA)
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(formData.isFinished ? COLORS.SUCCESS[0] : COLORS.WARNING[0]);
-    addEmoji(formData.isFinished ? "✅" : "⏳", margin, y + 1, 5);
-    doc.text(`STATUS DA ORDEM: ${formData.isFinished ? 'CONCLUÍDA NO SISTEMA' : 'PENDENTE DE FINALIZAÇÃO'}`, margin + 7, y + 1);
+    doc.setTextColor(COLORS.SUCCESS[0], COLORS.SUCCESS[1], COLORS.SUCCESS[2]);
+    addEmoji("✅", margin, y + 1, 5);
+    doc.text(`STATUS DA ORDEM: CONCLUÍDA`, margin + 7, y + 1);
 
     addFooter(1);
 
@@ -1124,7 +1124,7 @@ const ReportFormPage = () => {
 ⚙️ *Atividades Realizadas:* 
 ${formData.activityExecuted || ''}
 
-🎯 *OM Finalizada:* ${formData.isFinished ? '✅ SIM' : '⏳ EM ANDAMENTO'}
+🎯 *OM Finalizada:* CONCLUÍDA
 🔔 *Pendências:* ${formData.hasPendencies ? 'SIM (' + (formData.pendencyDescription || '') + ')' : 'NÃO'}
 👥 *Técnicos:* ${formData.technicians || ''}`;
     sendToWhatsApp(message);
@@ -1243,10 +1243,10 @@ ${formData.activityExecuted || ''}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🎯 Concluída?</label>
-                <button onClick={() => setFormData(p => ({...p, isFinished: !p.isFinished}))} className={`w-full py-3 rounded-xl text-[11px] font-black transition-all border-2 ${formData.isFinished ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-500 text-emerald-600' : 'bg-amber-50 dark:bg-amber-900/10 border-amber-500 text-amber-600'}`}>
-                  {formData.isFinished ? 'CONCLUÍDA' : 'EM ANDAMENTO'}
-                </button>
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🎯 Status</label>
+                <div className="w-full py-3 rounded-xl text-[11px] font-black text-center bg-emerald-50 dark:bg-emerald-900/10 border-2 border-emerald-500 text-emerald-600">
+                  CONCLUÍDA
+                </div>
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🔔 Pendências?</label>
