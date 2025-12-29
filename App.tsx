@@ -45,7 +45,9 @@ import {
   Wrench,
   Anchor,
   Square,
-  CheckSquare
+  CheckSquare,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { storage } from './services/storage';
 import { Report, Shift, ReportType, ReportPhoto, WorkCenter, UserSession, User } from './types';
@@ -137,6 +139,29 @@ const renderEmojiToDataUrl = (emoji: string): string | null => {
   } catch (e) {
     return null;
   }
+};
+
+// --- Componente de Status de Conexão ---
+const ConnectionBadge = () => {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  return (
+    <div className={`px-2.5 py-1 rounded-full flex items-center gap-1.5 transition-all ${isOnline ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'}`}>
+      {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+      <span className="text-[9px] font-black uppercase tracking-widest">{isOnline ? 'Online' : 'Offline'}</span>
+    </div>
+  );
 };
 
 // --- Componentes de UI ---
@@ -632,7 +657,10 @@ const HomePage = () => {
           </button>
           <div>
             <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">ReportMaster</h1>
-            <p className="text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest leading-none">S11D - Serra Sul</p>
+            <div className="flex items-center gap-2 mt-0.5">
+               <p className="text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest leading-none">S11D - Serra Sul</p>
+               <ConnectionBadge />
+            </div>
           </div>
         </div>
       </header>

@@ -1,23 +1,25 @@
 
-const CACHE_NAME = 'reportmaster-v1';
+const CACHE_NAME = 'reportmaster-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/index.tsx',
   'https://cdn.tailwindcss.com',
   'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'
 ];
 
-// Instalação do Service Worker e cache inicial
+// Instalação: Cacheia ativos locais e globais conhecidos
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
+  self.skipWaiting();
 });
 
-// Ativação e limpeza de caches antigos
+// Ativação: Limpa caches antigos
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -30,19 +32,43 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
+  self.clients.claim();
 });
 
-// Estratégia de Cache: Stale-While-Revalidate (Serve do cache, atualiza em segundo plano)
+// Interceptação: Cache Dinâmico para dependências ESM.sh e Fontes
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // Estratégia Cache-First para bibliotecas externas (esm.sh) e Google Fonts
+  if (url.hostname === 'esm.sh' || url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com' || url.hostname === 'cdn.tailwindcss.com') {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) return cachedResponse;
+        
+        return fetch(event.request).then((networkResponse) => {
+          return caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, networkResponse.clone());
+            return networkResponse;
+          });
+        });
+      })
+    );
+    return;
+  }
+
+  // Estratégia Stale-While-Revalidate para o restante do app
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request).then((networkResponse) => {
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, networkResponse.clone());
-        });
+        // Apenas cacheia se a resposta for válida
+        if (networkResponse && networkResponse.status === 200) {
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, networkResponse.clone());
+          });
+        }
         return networkResponse;
       }).catch(() => {
-        // Se falhar a rede e não houver cache, você poderia retornar uma página offline aqui
+        // Silenciosamente falha se estiver offline e sem cache
       });
       return cachedResponse || fetchPromise;
     })
