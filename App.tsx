@@ -1131,7 +1131,16 @@ const ReportFormPage = () => {
       addFooter(Math.ceil(formData.photos.length / 6) + 1);
     }
 
-    doc.save(`RELATORIO_TECNICO_OM_${formData.omNumber || 'SEM_NUMERO'}.pdf`);
+    // Sanitiza a descrição para remover caracteres que podem quebrar o nome do arquivo
+    const sanitizedDesc = (formData.omDescription || 'ATIVIDADE')
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]/gi, '_')
+      .toUpperCase()
+      .slice(0, 40);
+    
+    const omNum = formData.omNumber || 'SEM_NUMERO';
+    doc.save(`OM_${omNum}_${sanitizedDesc}.pdf`);
   };
 
   const shareViaWhatsApp = () => {
