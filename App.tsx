@@ -40,7 +40,8 @@ import {
   LogOut,
   ArrowLeft,
   Truck,
-  Wrench
+  Wrench,
+  Search
 } from 'lucide-react';
 import { storage } from './services/storage';
 import { Report, Shift, ReportType, ReportPhoto, WorkCenter, UserSession, User, ReportCategory } from './types';
@@ -681,6 +682,7 @@ const HomePage = () => {
   const [activeTab, setActiveTab] = useState<ReportType>('template');
   const [activeCategory, setActiveCategory] = useState<ReportCategory>('fixos');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Modelos de Início de Turno Editáveis
   const [shiftTemplates, setShiftTemplates] = useState<Record<string, string>>(DEFAULT_SHIFT_TEMPLATES);
@@ -728,7 +730,16 @@ const HomePage = () => {
     }
   };
 
-  const filteredReports = reports.filter(r => r.type === activeTab && (r.category === activeCategory || !r.category));
+  const filteredReports = reports.filter(r => {
+    const matchesTab = r.type === activeTab;
+    const matchesCategory = r.category === activeCategory || !r.category;
+    const matchesSearch = searchTerm === '' || 
+      r.omDescription.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.omNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.equipment.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    return matchesTab && matchesCategory && matchesSearch;
+  });
 
   return (
     <div className="flex flex-col gap-4 sm:gap-5 p-4 sm:p-5 max-w-2xl mx-auto w-full pb-24">
@@ -748,6 +759,22 @@ const HomePage = () => {
           </div>
         </div>
       </header>
+
+      {/* Barra de Busca - "Buscar modelo" */}
+      {activeTab !== 'shift_start' && (
+        <div className="relative">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+            <Search className="w-5 h-5" />
+          </div>
+          <input 
+            type="text" 
+            placeholder={activeTab === 'template' ? "Buscar modelo..." : "Buscar relatório..."}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white dark:bg-dark-card border dark:border-dark-border text-sm font-semibold dark:text-white shadow-sm focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+          />
+        </div>
+      )}
 
       {/* Abas de Categoria (FIXOS / MÓVEIS) */}
       <div className="flex gap-2 p-1 bg-slate-100 dark:bg-dark-card rounded-2xl shadow-inner">
@@ -855,7 +882,7 @@ const HomePage = () => {
           ))}
           {filteredReports.length === 0 && (
              <div className="py-12 text-center text-slate-400 dark:text-slate-500 text-xs font-bold border-2 border-dashed border-slate-200 dark:border-dark-border rounded-3xl opacity-60">
-               Nenhum item encontrado na categoria {activeCategory}.
+               {searchTerm ? 'Nenhum resultado encontrado para a busca.' : `Nenhum item encontrado na categoria ${activeCategory}.`}
              </div>
           )}
         </div>
@@ -960,7 +987,8 @@ const ReportFormPage = () => {
       storage.saveReport(templateToUpdate);
       const newReportEntry = { ...formData, id: crypto.randomUUID(), type: 'report', date: new Date().toISOString().split('T')[0], updatedAt: Date.now(), createdAt: Date.now() } as Report;
       storage.saveReport(newReportEntry);
-      navigate(`/edit/${newReportEntry.id}`, { replace: true });
+      // Alterado para voltar para a página inicial conforme solicitado
+      navigate('/', { state: { tab: 'report', category: formData.category } });
     } else {
       const finalReport = { ...formData, type: saveType, updatedAt: Date.now() } as Report;
       storage.saveReport(finalReport);
