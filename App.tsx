@@ -964,7 +964,6 @@ const ReportFormPage = () => {
     }
   };
 
-  // Fixed duplicate definitions by keeping only one set of logic functions
   const toggleTechnician = (name: string) => {
     const currentList = formData.technicians ? formData.technicians.split(', ').filter(n => n) : [];
     let newList: string[] = currentList.includes(name) ? currentList.filter(n => n !== name) : [...currentList, name];
@@ -1029,7 +1028,7 @@ AUTOMAÇÃO MINA SERRA SUL
 
   const generatePDF = () => {
     const doc = new jsPDF();
-    const margin = 20;
+    const margin = 15; // Margem mais compacta
     const pageWidth = 210;
     let y = 0;
 
@@ -1042,87 +1041,69 @@ AUTOMAÇÃO MINA SERRA SUL
 
     const addFooter = (page: number, total: number) => {
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
+      doc.setFontSize(7);
       doc.setTextColor(148, 163, 184);
-      doc.text(`Relatório Gerado via ReportMaster OM - Pagina ${page} de ${total}`, pageWidth / 2, 287, { align: 'center' });
-      doc.text("S11D - Serra Sul - Automação de Mina", margin, 287);
+      doc.text(`Relatório Gerado via ReportMaster OM - Pagina ${page} de ${total}`, pageWidth / 2, 290, { align: 'center' });
     };
 
     const drawPDFEmoji = (type: string, x: number, y: number) => {
       doc.setLineWidth(0.1);
-      if (type === 'date') { // 🗓️
-        doc.setFillColor(37, 99, 235);
-        doc.rect(x, y - 3, 4, 4, 'F');
-        doc.setFillColor(255, 255, 255);
-        doc.rect(x + 1, y - 2, 2, 2, 'F');
-      } else if (type === 'equipment') { // 🚜
-        doc.setFillColor(245, 158, 11);
-        doc.rect(x, y - 3, 4, 3, 'F');
-        doc.setFillColor(30, 41, 59);
-        doc.circle(x + 1, y - 0.5, 0.8, 'F');
-        doc.circle(x + 3, y - 0.5, 0.8, 'F');
-      } else if (type === 'local') { // 📌
-        doc.setFillColor(225, 29, 72);
-        doc.circle(x + 2, y - 2.5, 1.8, 'F');
-        doc.setDrawColor(225, 29, 72);
-        doc.line(x + 2, y - 0.7, x + 2, y + 0.5);
-      } else if (type === 'om') { // 📂
-        doc.setFillColor(79, 70, 229);
-        doc.rect(x, y - 3.5, 4.5, 3.5, 'F');
-        doc.setFillColor(255, 255, 255);
-        doc.rect(x + 0.5, y - 3, 1.5, 0.5, 'F');
-      } else if (type === 'check') { // ✅
-        doc.setFillColor(16, 185, 129);
-        doc.circle(x + 2, y - 2, 1.8, 'F');
-        doc.setDrawColor(255, 255, 255);
-        doc.setLineWidth(0.4);
-        doc.line(x + 1.2, y - 2, x + 1.8, y - 1.2);
-        doc.line(x + 1.8, y - 1.2, x + 2.8, y - 2.8);
-      } else if (type === 'time') { // ⏰
-        doc.setFillColor(245, 158, 11);
-        doc.circle(x + 2, y - 2, 2, 'F');
-        doc.setDrawColor(255, 255, 255);
-        doc.setLineWidth(0.3);
-        doc.line(x + 2, y - 2, x + 2, y - 3.2);
-        doc.line(x + 2, y - 2, x + 3.2, y - 2);
+      if (type === 'date') { 
+        doc.setFillColor(37, 99, 235); doc.rect(x, y - 3, 3.5, 3.5, 'F');
+        doc.setFillColor(255, 255, 255); doc.rect(x + 0.8, y - 2.2, 1.8, 1.8, 'F');
+      } else if (type === 'equipment') { 
+        doc.setFillColor(245, 158, 11); doc.rect(x, y - 3, 3.5, 2.5, 'F');
+        doc.setFillColor(30, 41, 59); doc.circle(x + 0.8, y - 0.5, 0.7, 'F'); doc.circle(x + 2.7, y - 0.5, 0.7, 'F');
+      } else if (type === 'local') { 
+        doc.setFillColor(225, 29, 72); doc.circle(x + 1.8, y - 2.5, 1.6, 'F');
+        doc.setDrawColor(225, 29, 72); doc.line(x + 1.8, y - 0.9, x + 1.8, y + 0.2);
+      } else if (type === 'om') { 
+        doc.setFillColor(79, 70, 229); doc.rect(x, y - 3.2, 4, 3.2, 'F');
+        doc.setFillColor(255, 255, 255); doc.rect(x + 0.5, y - 2.8, 1.2, 0.4, 'F');
+      } else if (type === 'check') { 
+        doc.setFillColor(16, 185, 129); doc.circle(x + 1.8, y - 1.8, 1.6, 'F');
+        doc.setDrawColor(255, 255, 255); doc.setLineWidth(0.3); doc.line(x + 1.1, y - 1.8, x + 1.6, y - 1.1); doc.line(x + 1.6, y - 1.1, x + 2.5, y - 2.5);
+      } else if (type === 'time') { 
+        doc.setFillColor(245, 158, 11); doc.circle(x + 1.8, y - 1.8, 1.8, 'F');
+        doc.setDrawColor(255, 255, 255); doc.setLineWidth(0.2); doc.line(x + 1.8, y - 1.8, x + 1.8, y - 2.8); doc.line(x + 1.8, y - 1.8, x + 2.8, y - 1.8);
       }
     };
 
     const addHeader = () => {
       doc.setFillColor(BLUE_PRIMARY[0], BLUE_PRIMARY[1], BLUE_PRIMARY[2]);
-      doc.rect(0, 0, pageWidth, 45, 'F');
+      doc.rect(0, 0, pageWidth, 40, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(22);
-      doc.text("RELATÓRIO DE EXECUÇÃO", margin, 25);
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text("SISTEMA DE GESTÃO DE MANUTENÇÃO - AUTOMAÇÃO MINA", margin, 32);
-      doc.setFont("helvetica", "bold");
-      doc.text("UNIDADE: S11D SERRA SUL", margin, 37);
-      doc.setFillColor(255, 255, 255);
-      doc.roundedRect(145, 12, 50, 22, 2, 2, 'F');
-      doc.setTextColor(BLUE_PRIMARY[0], BLUE_PRIMARY[1], BLUE_PRIMARY[2]);
+      doc.setFontSize(18);
+      doc.text("RELATÓRIO DE EXECUÇÃO", margin, 20);
       doc.setFontSize(8);
-      doc.text("ORDEM DE MANUTENÇÃO", 149, 18);
-      doc.setFontSize(14);
+      doc.setFont("helvetica", "normal");
+      doc.text("SISTEMA DE GESTÃO DE MANUTENÇÃO - UNIDADE: S11D SERRA SUL", margin, 26);
       doc.setFont("helvetica", "bold");
-      doc.text(stripSpecialChars(formData.omNumber || "8000XXXX"), 149, 28);
+      doc.text("AUTOMAÇÃO DE MINA", margin, 31);
+      
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(150, 10, 45, 20, 1.5, 1.5, 'F');
+      doc.setTextColor(BLUE_PRIMARY[0], BLUE_PRIMARY[1], BLUE_PRIMARY[2]);
+      doc.setFontSize(7);
+      doc.text("ORDEM DE MANUTENÇÃO", 154, 16);
+      doc.setFontSize(12);
+      doc.text(stripSpecialChars(formData.omNumber || "8000XXXX"), 154, 25);
     };
 
     const drawSectionTitle = (title: string, currentY: number, emojiType?: string) => {
       doc.setFillColor(BG_SECTION[0], BG_SECTION[1], BG_SECTION[2]);
-      doc.rect(margin, currentY, pageWidth - (margin * 2), 10, 'F');
+      doc.rect(margin, currentY, pageWidth - (margin * 2), 8, 'F');
       doc.setDrawColor(BLUE_PRIMARY[0], BLUE_PRIMARY[1], BLUE_PRIMARY[2]);
-      doc.setLineWidth(0.8);
-      doc.line(margin, currentY, margin, currentY + 10);
+      doc.setLineWidth(0.5);
+      doc.line(margin, currentY, margin, currentY + 8);
       doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
-      const textOffset = emojiType ? 10 : 5;
-      if (emojiType) drawPDFEmoji(emojiType, margin + 3.5, currentY + 7);
-      doc.text(title.toUpperCase(), margin + textOffset, currentY + 6.5);
-      return currentY + 16;
+      doc.setFontSize(9);
+      const textOffset = emojiType ? 8 : 4;
+      if (emojiType) drawPDFEmoji(emojiType, margin + 2.5, currentY + 5.5);
+      doc.text(title.toUpperCase(), margin + textOffset, currentY + 5.5);
+      return currentY + 12;
     };
 
     const drawInfoGrid = (data: {label: string, value: string, emoji?: string}[], currentY: number) => {
@@ -1131,22 +1112,23 @@ AUTOMAÇÃO MINA SERRA SUL
         const col = i % 3;
         const row = Math.floor(i / 3);
         const xPos = margin + (col * colWidth);
-        const yPos = currentY + (row * 12);
-        if (item.emoji) drawPDFEmoji(item.emoji, xPos, yPos - 1.5);
-        doc.setFontSize(7);
+        const yPos = currentY + (row * 10);
+        if (item.emoji) drawPDFEmoji(item.emoji, xPos, yPos - 1);
+        doc.setFontSize(6.5);
         doc.setTextColor(SLATE_LIGHT[0], SLATE_LIGHT[1], SLATE_LIGHT[2]);
         doc.setFont("helvetica", "bold");
-        doc.text(stripSpecialChars(item.label).toUpperCase(), xPos + (item.emoji ? 6 : 0), yPos);
+        doc.text(stripSpecialChars(item.label).toUpperCase(), xPos + (item.emoji ? 5 : 0), yPos);
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
+        doc.setFontSize(8.5);
         doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
-        doc.text(stripSpecialChars(item.value || "-"), xPos + (item.emoji ? 6 : 0), yPos + 5);
+        doc.text(stripSpecialChars(item.value || "-"), xPos + (item.emoji ? 5 : 0), yPos + 4);
       });
-      return currentY + (Math.ceil(data.length / 3) * 15);
+      return currentY + (Math.ceil(data.length / 3) * 11);
     };
 
+    // --- Primeira Página ---
     addHeader();
-    y = 55;
+    y = 50;
     y = drawSectionTitle("Dados Gerais da Atividade", y, 'om');
     y = drawInfoGrid([
       { label: "Data de Execução", value: new Date(formData.date!).toLocaleDateString('pt-BR'), emoji: 'date' },
@@ -1157,7 +1139,7 @@ AUTOMAÇÃO MINA SERRA SUL
       { label: "Turno da Equipe", value: `Turno ${formData.teamShift}` }
     ], y);
 
-    y += 5;
+    y += 2;
     y = drawSectionTitle("Logística e Segurança", y, 'time');
     y = drawInfoGrid([
       { label: "Início Planejado", value: formData.startTime! },
@@ -1168,86 +1150,92 @@ AUTOMAÇÃO MINA SERRA SUL
     ], y);
 
     if (formData.iamoDeviation) {
-      y += 2;
+      y += 1;
       doc.setFillColor(254, 242, 242);
-      doc.roundedRect(margin, y, pageWidth - (margin * 2), 15, 1, 1, 'F');
-      doc.setFontSize(7);
+      doc.roundedRect(margin, y, pageWidth - (margin * 2), 12, 1, 1, 'F');
+      doc.setFontSize(6.5);
       doc.setTextColor(225, 29, 72);
-      doc.text("DESCRIÇÃO DO DESVIO IAMO", margin + 3, y + 5);
-      doc.setFontSize(9);
+      doc.text("DESCRIÇÃO DO DESVIO IAMO", margin + 3, y + 4);
+      doc.setFontSize(8);
       doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
-      doc.text(stripSpecialChars(formData.iamoDescription || "-"), margin + 3, y + 10);
-      y += 20;
+      doc.text(stripSpecialChars(formData.iamoDescription || "-"), margin + 3, y + 8);
+      y += 15;
     } else {
-      y += 5;
+      y += 2;
     }
 
     y = drawSectionTitle("Escopo da Ordem de Manutenção", y);
-    doc.setFontSize(9);
+    doc.setFontSize(8.5);
     doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
     doc.setFont("helvetica", "normal");
-    const omDescLines = doc.splitTextToSize(stripSpecialChars(formData.omDescription!), pageWidth - (margin * 2) - 10);
-    doc.text(omDescLines, margin + 5, y);
-    y += (omDescLines.length * 5) + 10;
+    const omDescLines = doc.splitTextToSize(stripSpecialChars(formData.omDescription!), pageWidth - (margin * 2) - 8);
+    doc.text(omDescLines, margin + 4, y);
+    y += (omDescLines.length * 4.5) + 6;
 
-    if (y > 220) { doc.addPage(); addHeader(); y = 55; }
+    // Seção de Atividades (Checklist)
+    if (y > 240) { doc.addPage(); y = 20; }
     y = drawSectionTitle("Atividades Executadas (Checklist)", y, 'check');
-    doc.setFontSize(9);
+    doc.setFontSize(8.5);
     doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
     const rawExec = formData.activityExecuted || "";
     const execLinesList = rawExec.split('\n');
     execLinesList.forEach(line => {
       const isCheck = line.includes('✅');
       const cleanLine = stripSpecialChars(line);
-      const wrappedLines = doc.splitTextToSize(cleanLine, pageWidth - (margin * 2) - 15);
-      if (y > 270) { doc.addPage(); addHeader(); y = 55; }
-      if (isCheck) drawPDFEmoji('check', margin + 5, y);
-      doc.text(wrappedLines, margin + (isCheck ? 12 : 5), y);
-      y += (wrappedLines.length * 5) + 2;
+      const wrappedLines = doc.splitTextToSize(cleanLine, pageWidth - (margin * 2) - 12);
+      if (y > 275) { doc.addPage(); y = 20; }
+      if (isCheck) drawPDFEmoji('check', margin + 3, y + 1.2);
+      doc.text(wrappedLines, margin + (isCheck ? 9 : 4), y + 1.2);
+      y += (wrappedLines.length * 4.5) + 1.5;
     });
 
     if (formData.hasPendencies) {
-      y += 5;
-      if (y > 250) { doc.addPage(); addHeader(); y = 55; }
+      y += 3;
+      if (y > 260) { doc.addPage(); y = 20; }
       doc.setFillColor(255, 251, 235);
-      doc.roundedRect(margin, y, pageWidth - (margin * 2), 15, 1, 1, 'F');
-      doc.setFontSize(7);
+      doc.roundedRect(margin, y, pageWidth - (margin * 2), 12, 1, 1, 'F');
+      doc.setFontSize(6.5);
       doc.setTextColor(217, 119, 6);
-      doc.text("PENDÊNCIAS REGISTRADAS", margin + 3, y + 5);
-      doc.setFontSize(9);
+      doc.text("PENDÊNCIAS REGISTRADAS", margin + 3, y + 4);
+      doc.setFontSize(8);
       doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
-      doc.text(stripSpecialChars(formData.pendencyDescription || "-"), margin + 3, y + 10);
-      y += 20;
+      doc.text(stripSpecialChars(formData.pendencyDescription || "-"), margin + 3, y + 8);
+      y += 15;
     }
 
-    y += 10;
+    y += 4;
+    if (y > 270) { doc.addPage(); y = 20; }
     y = drawSectionTitle("Equipe Técnica", y);
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
-    doc.text(stripSpecialChars(formData.technicians || "-"), margin + 5, y);
+    doc.text(stripSpecialChars(formData.technicians || "-"), margin + 4, y);
+    y += 10;
 
+    // Seção de Fotos (Sempre em nova página para organização se houver muitas)
     if (formData.photos?.length) {
-      doc.addPage(); addHeader(); y = 55;
+      doc.addPage(); 
+      y = 20;
       y = drawSectionTitle("Evidências Fotográficas", y);
-      const imgWidth = 80;
-      const imgHeight = 60;
+      const imgWidth = 85;
+      const imgHeight = 65;
       const gutter = 10;
       formData.photos.forEach((p, i) => {
-        if (y > 220) { doc.addPage(); addHeader(); y = 55; y = drawSectionTitle("Evidências (Cont.)", y); }
+        if (y > 220) { doc.addPage(); y = 20; y = drawSectionTitle("Evidências (Cont.)", y); }
         const col = i % 2;
         const xPos = margin + (col * (imgWidth + gutter));
         doc.setDrawColor(BORDER_COLOR[0], BORDER_COLOR[1], BORDER_COLOR[2]);
-        doc.rect(xPos, y, imgWidth, imgHeight + 12);
-        try { doc.addImage(p.dataUrl, 'JPEG', xPos + 1, y + 1, imgWidth - 2, imgHeight - 2, undefined, 'FAST'); } catch (e) {}
+        doc.setLineWidth(0.1);
+        doc.rect(xPos, y, imgWidth, imgHeight + 10);
+        try { doc.addImage(p.dataUrl, 'JPEG', xPos + 0.5, y + 0.5, imgWidth - 1, imgHeight - 1, undefined, 'FAST'); } catch (e) {}
         if (p.caption) {
           doc.setFillColor(241, 245, 249);
-          doc.rect(xPos, y + imgHeight, imgWidth, 12, 'F');
-          doc.setFontSize(7);
+          doc.rect(xPos, y + imgHeight, imgWidth, 10, 'F');
+          doc.setFontSize(6.5);
           doc.setTextColor(SLATE_LIGHT[0], SLATE_LIGHT[1], SLATE_LIGHT[2]);
           const capLines = doc.splitTextToSize(stripSpecialChars(p.caption), imgWidth - 4);
           doc.text(capLines, xPos + 2, y + imgHeight + 4.5);
         }
-        if (col === 1 || i === formData.photos!.length - 1) y += imgHeight + 20;
+        if (col === 1 || i === formData.photos!.length - 1) y += imgHeight + 15;
       });
     }
 
@@ -1256,7 +1244,7 @@ AUTOMAÇÃO MINA SERRA SUL
       doc.setPage(i);
       addFooter(i, pageCount);
     }
-    doc.save(`RELATORIO_TECNICO_OM_${formData.omNumber || 'SEM_NUMERO'}.pdf`);
+    doc.save(`OM_${formData.omNumber || 'RELATORIO'}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   return (
@@ -1519,9 +1507,9 @@ AUTOMAÇÃO MINA SERRA SUL
           {isNew ? (
             <Button onClick={() => handleAction('template')} className="w-full h-14 rounded-2xl shadow-lg text-base">💾 Salvar Modelo</Button>
           ) : formData.type === 'template' ? (
-            <Button onClick={() => handleAction('report')} variant="success" className="w-full h-14 rounded-2xl shadow-lg text-base">🛠️ Iniciar Turno</Button>
+            <Button onClick={() => handleAction('report')} variant="success" className="w-full h-14 rounded-2xl shadow-lg text-base">🛠️ Utilizar Esse Modelo</Button>
           ) : (
-            <Button onClick={() => handleAction('report')} variant="primary" className="w-full h-14 rounded-2xl shadow-lg text-base">✅ Concluir OM</Button>
+            <Button onClick={() => handleAction('report')} variant="primary" className="w-full h-14 rounded-2xl shadow-lg text-base uppercase font-black">💾 SALVAR</Button>
           )}
         </div>
       </div>
