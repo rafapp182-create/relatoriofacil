@@ -213,6 +213,21 @@ const stripSpecialChars = (text: string) => {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^\x20-\x7E\s]/g, "")
+    .replace(/✅/g, "[OK]")
+    .replace(/🛑/g, "[!] ")
+    .replace(/🗓️/g, "")
+    .replace(/🚜/g, "")
+    .replace(/📌/g, "")
+    .replace(/📂/g, "")
+    .replace(/🛠️/g, "")
+    .replace(/⏰/g, "")
+    .replace(/♻️/g, "")
+    .replace(/📈/g, "")
+    .replace(/🎯/g, "")
+    .replace(/🔔/g, "")
+    .replace(/🔖/g, "")
+    .replace(/👥/g, "")
+    .replace(/⚠️/g, "[ATENCAO]")
     .trim();
 };
 
@@ -367,7 +382,7 @@ const Button = ({
   disabled?: boolean;
   children?: React.ReactNode;
 }) => {
-  const base = "px-4 py-2 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:active:scale-100";
+  const base = "px-4 py-2 rounded-xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:active:scale-100 min-h-[44px]";
   const variants = {
     primary: "bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-none",
     secondary: "bg-slate-200 dark:bg-dark-card text-slate-800 dark:text-white",
@@ -395,7 +410,7 @@ const CompactInput: React.FC<{
   disabled?: boolean;
 }> = ({ label, value, onChange, type = 'text', placeholder, required, error, icon, disabled }) => (
   <div className={`flex flex-col gap-1 w-full ${disabled ? 'opacity-60' : ''}`}>
-    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1 flex items-center gap-1">
+    <label className="text-[10px] sm:text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1 flex items-center gap-1">
       {label} {required && !disabled && <span className="text-rose-600">*</span>}
     </label>
     <div className="relative">
@@ -406,7 +421,7 @@ const CompactInput: React.FC<{
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         placeholder={placeholder}
-        className={`w-full ${icon ? 'pl-9' : 'px-3'} py-2.5 rounded-xl border bg-white dark:bg-dark-card ${error ? 'border-rose-400 ring-1 ring-rose-100' : 'border-slate-300 dark:border-dark-border'} focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all text-sm font-semibold text-slate-800 dark:text-white shadow-sm placeholder:text-slate-400 disabled:bg-slate-100`}
+        className={`w-full ${icon ? 'pl-9' : 'px-3'} py-3 rounded-xl border bg-white dark:bg-dark-card ${error ? 'border-rose-400 ring-1 ring-rose-100' : 'border-slate-300 dark:border-dark-border'} focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all text-sm font-semibold text-slate-800 dark:text-white shadow-sm placeholder:text-slate-400 disabled:bg-slate-100`}
       />
     </div>
   </div>
@@ -423,7 +438,7 @@ const CompactTextArea: React.FC<{
   disabled?: boolean;
 }> = ({ label, value, onChange, placeholder, required, error, rows = 3, disabled }) => (
   <div className={`flex flex-col gap-1 w-full ${disabled ? 'opacity-60' : ''}`}>
-    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1 flex items-center gap-1">
+    <label className="text-[10px] sm:text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1 flex items-center gap-1">
       {label} {required && !disabled && <span className="text-rose-600">*</span>}
     </label>
     <textarea
@@ -432,7 +447,7 @@ const CompactTextArea: React.FC<{
       placeholder={placeholder}
       rows={rows}
       disabled={disabled}
-      className={`w-full px-3 py-2.5 rounded-xl border bg-white dark:bg-dark-card ${error ? 'border-rose-400 ring-1 ring-rose-100' : 'border-slate-300 dark:border-dark-border'} focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all text-sm font-semibold text-slate-800 dark:text-white resize-none shadow-sm placeholder:text-slate-400 disabled:bg-slate-100`}
+      className={`w-full px-3 py-3 rounded-xl border bg-white dark:bg-dark-card ${error ? 'border-rose-400 ring-1 ring-rose-100' : 'border-slate-300 dark:border-dark-border'} focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all text-sm font-semibold text-slate-800 dark:text-white resize-none shadow-sm placeholder:text-slate-400 disabled:bg-slate-100`}
     />
   </div>
 );
@@ -481,27 +496,27 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-dark-bg flex items-center justify-center p-6 animate-in fade-in duration-500">
-      <div className="w-full max-w-md bg-white dark:bg-dark-card rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-dark-border overflow-hidden">
-        <div className="bg-blue-600 p-8 flex flex-col items-center text-white relative">
+    <div className="min-h-screen bg-slate-100 dark:bg-dark-bg flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-500">
+      <div className="w-full max-w-md bg-white dark:bg-dark-card rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-dark-border overflow-hidden">
+        <div className="bg-blue-600 p-6 sm:p-8 flex flex-col items-center text-white relative">
           {isRegistering && (
             <button 
               onClick={() => setIsRegistering(false)} 
-              className="absolute left-6 top-8 p-2 bg-white/10 rounded-xl active:scale-90 transition-all"
+              className="absolute left-4 top-6 sm:left-6 sm:top-8 p-2 bg-white/10 rounded-xl active:scale-90 transition-all"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
           )}
-          <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-4">
-            {isRegistering ? <UserPlus className="w-8 h-8 text-white" /> : <Lock className="w-8 h-8 text-white" />}
+          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-4">
+            {isRegistering ? <UserPlus className="w-7 h-7 sm:w-8 sm:h-8 text-white" /> : <Lock className="w-7 h-7 sm:w-8 sm:h-8 text-white" />}
           </div>
-          <h2 className="text-2xl font-black tracking-tight">ReportMaster</h2>
-          <p className="text-blue-100 text-xs font-bold uppercase tracking-widest mt-1">
+          <h2 className="text-xl sm:text-2xl font-black tracking-tight">ReportMaster</h2>
+          <p className="text-blue-100 text-[10px] font-bold uppercase tracking-widest mt-1">
             {isRegistering ? 'Criar Nova Conta' : 'Acesso Restrito'}
           </p>
         </div>
         
-        <form onSubmit={handleAction} className="p-8 space-y-6">
+        <form onSubmit={handleAction} className="p-6 sm:p-8 space-y-6">
           <div className="space-y-4">
             <CompactInput 
               label="Nome de Usuário" 
@@ -556,14 +571,14 @@ const LoginPage = () => {
               <button 
                 type="button" 
                 onClick={() => setIsRegistering(true)}
-                className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest p-2 hover:opacity-70 transition-all"
+                className="text-[11px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest p-2 hover:opacity-70 transition-all"
               >
                 Não tem uma conta? Criar Agora
               </button>
             )}
           </div>
           
-          <p className="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">
+          <p className="text-center text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">
             Sua conta é armazenada localmente.<br/>S11D - Serra Sul
           </p>
         </form>
@@ -647,7 +662,7 @@ const ImageEditor: React.FC<{
       <div className="flex-1 flex items-center justify-center overflow-hidden bg-slate-900/50 rounded-2xl border border-white/10">
         <canvas ref={canvasRef} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} className="touch-none bg-white rounded-sm shadow-2xl" />
       </div>
-      <div className="mt-4 flex gap-3">
+      <div className="mt-4 flex gap-3 pb-safe">
         <Button onClick={onCancel} variant="secondary" className="flex-1 h-12">Cancelar</Button>
         <Button onClick={handleSave} variant="primary" className="flex-1 h-12">Salvar</Button>
       </div>
@@ -714,11 +729,11 @@ const HomePage = () => {
   const filteredReports = reports.filter(r => r.type === activeTab && (r.category === activeCategory || !r.category));
 
   return (
-    <div className="flex flex-col gap-5 p-5 max-w-2xl mx-auto w-full pb-20">
+    <div className="flex flex-col gap-4 sm:gap-5 p-4 sm:p-5 max-w-2xl mx-auto w-full pb-24">
       <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
       
       <header className="pt-2 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <button 
             onClick={() => setIsMenuOpen(true)}
             className="p-2.5 bg-white dark:bg-dark-card border dark:border-dark-border rounded-xl shadow-sm text-slate-700 dark:text-slate-300 active:scale-95 transition-all"
@@ -726,7 +741,7 @@ const HomePage = () => {
             <Menu className="w-6 h-6" />
           </button>
           <div>
-            <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">ReportMaster</h1>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white tracking-tight">ReportMaster</h1>
             <p className="text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest leading-none">S11D - Serra Sul</p>
           </div>
         </div>
@@ -756,7 +771,7 @@ const HomePage = () => {
 
       {activeTab === 'template' && (
         <Button onClick={() => navigate('/new', { state: { category: activeCategory, type: 'template' } })} className="h-14 rounded-xl text-base shadow-lg">
-          <Plus className="w-5 h-5" /> Criar Novo Modelo {activeCategory === 'fixos' ? 'FIXO' : 'MÓVEL'}
+          <Plus className="w-5 h-5" /> Novo Modelo {activeCategory === 'fixos' ? 'FIXO' : 'MÓVEL'}
         </Button>
       )}
 
@@ -1013,152 +1028,238 @@ AUTOMAÇÃO MINA SERRA SUL
 
   const generatePDF = () => {
     const doc = new jsPDF();
-    const margin = 15;
-    let y = 15;
+    const margin = 20;
+    const pageWidth = 210;
+    let y = 0;
 
-    const addFooter = () => {
+    // Cores Profissionais
+    const BLUE_PRIMARY = [37, 99, 235]; // #2563eb
+    const SLATE_DARK = [30, 41, 59];    // #1e293b
+    const SLATE_LIGHT = [100, 116, 139]; // #64748b
+    const BG_SECTION = [248, 250, 252]; // #f8fafc
+    const BORDER_COLOR = [226, 232, 240]; // #e2e8f0
+
+    const addFooter = (page: number, total: number) => {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
-      const footerText = "relatorio gerado no app reportmast criado por rafael";
-      doc.text(footerText, 105, 290, { align: 'center' });
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Relatório Gerado via ReportMaster OM - Pagina ${page} de ${total}`, pageWidth / 2, 287, { align: 'center' });
+      doc.text("S11D - Serra Sul - Automação de Mina", margin, 287);
     };
 
-    doc.setFillColor(37, 99, 235);
-    doc.rect(0, 0, 210, 40, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.text("SISTEMA DE RELATORIOS AUTOMACAO", margin, 15);
-    doc.setFontSize(18);
-    doc.text("RELATORIO DE EXECUCAO", margin, 26);
-    doc.setFontSize(10);
-    doc.text("MINA SERRA SUL - S11D", margin, 34);
-    
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(140, 12, 55, 18, 2, 2, 'F');
-    doc.setTextColor(37, 99, 235);
-    doc.setFontSize(8);
-    doc.text("NUMERO DA OM", 145, 18);
-    doc.setFontSize(14);
-    doc.text(stripSpecialChars(formData.omNumber || "8000XXXX"), 145, 26);
+    const addHeader = () => {
+      // Background Header
+      doc.setFillColor(BLUE_PRIMARY[0], BLUE_PRIMARY[1], BLUE_PRIMARY[2]);
+      doc.rect(0, 0, pageWidth, 45, 'F');
 
-    doc.setTextColor(30, 41, 59); // slate-800
-    y = 55;
-
-    const addSectionHeader = (title: string) => {
-      doc.setFillColor(241, 245, 249);
-      doc.rect(margin, y - 5, 180, 8, 'F');
+      // Título
+      doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
-      doc.setTextColor(30, 41, 59);
-      doc.text(title.toUpperCase(), margin + 3, y + 1);
-      y += 12;
-    };
-
-    const addDataRow = (label: string, value: string | boolean, xOffset = 0) => {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(7);
-      doc.setTextColor(100, 116, 139);
-      doc.text(stripSpecialChars(label).toUpperCase(), margin + xOffset, y);
-      doc.setFont("helvetica", "normal");
+      doc.setFontSize(22);
+      doc.text("RELATÓRIO DE EXECUÇÃO", margin, 25);
+      
       doc.setFontSize(10);
-      doc.setTextColor(30, 41, 59);
-      doc.text(typeof value === 'boolean' ? (value ? "SIM" : "NAO") : stripSpecialChars(value || "-"), margin + xOffset, y + 5);
-      return y + 12;
-    };
+      doc.setFont("helvetica", "normal");
+      doc.text("SISTEMA DE GESTÃO DE MANUTENÇÃO - AUTOMAÇÃO MINA", margin, 32);
+      doc.setFont("helvetica", "bold");
+      doc.text("UNIDADE: S11D SERRA SUL", margin, 37);
 
-    addSectionHeader("DADOS DE IDENTIFICACAO");
-    addDataRow("Data de Execucao", new Date(formData.date!).toLocaleDateString('pt-BR'));
-    addDataRow("Equipamento", formData.equipment!, 60);
-    addDataRow("Local/Frente", formData.local!, 120);
-    y += 15;
-    
-    addDataRow("Tipo de Atividade", formData.activityType!);
-    addDataRow("Periodo", `${formData.startTime} ate ${formData.endTime}`, 60);
-    addDataRow("Turno da Equipe", `TURNO ${formData.teamShift}`, 120);
-    y += 15;
-
-    if (formData.iamoDeviation) {
-      addDataRow("Ocorrencia IAMO", "SIM");
-      addDataRow("Justificativa IAMO", formData.iamoDescription || "-", 60);
-      y += 15;
-    }
-
-    addSectionHeader("DETALHAMENTO TECNICO");
-    doc.setFontSize(7);
-    doc.setTextColor(100, 116, 139);
-    doc.text("DESCRICAO DA OM", margin, y);
-    y += 4;
-    doc.setTextColor(30, 41, 59);
-    doc.setFontSize(10);
-    const descLines = doc.splitTextToSize(stripSpecialChars(formData.omDescription!), 180);
-    doc.text(descLines, margin, y);
-    y += (descLines.length * 5) + 6;
-
-    doc.setFontSize(7);
-    doc.setTextColor(100, 116, 139);
-    doc.text("ATIVIDADES EFETIVAMENTE EXECUTADAS", margin, y);
-    y += 4;
-    doc.setTextColor(30, 41, 59);
-    doc.setFontSize(10);
-    const execLines = doc.splitTextToSize(stripSpecialChars(formData.activityExecuted!), 180);
-    doc.text(execLines, margin, y);
-    y += (execLines.length * 5) + 10;
-
-    addSectionHeader("STATUS FINAL E EQUIPE");
-    addDataRow("Status OM", formData.isFinished ? "CONCLUIDA" : "EM ANDAMENTO");
-    addDataRow("Pendencias", formData.hasPendencies ? "SIM" : "NAO", 60);
-    if (formData.hasPendencies) addDataRow("Descritivo Pendencia", formData.pendencyDescription!, 120);
-    y += 15;
-    addDataRow("Centro de Trabalho", formData.workCenter!);
-    addDataRow("Equipe Técnica Envolvida", formData.technicians!, 60);
-    
-    addFooter();
-
-    if (formData.photos?.length) {
-      doc.addPage();
-      y = 20;
+      // Badge OM
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(145, 12, 50, 22, 2, 2, 'F');
+      doc.setTextColor(BLUE_PRIMARY[0], BLUE_PRIMARY[1], BLUE_PRIMARY[2]);
+      doc.setFontSize(8);
+      doc.text("ORDEM DE MANUTENÇÃO", 149, 18);
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(37, 99, 235);
-      doc.text("EVIDENCIAS FOTOGRAFICAS", margin, y);
-      y += 10;
+      doc.text(stripSpecialChars(formData.omNumber || "8000XXXX"), 149, 28);
+    };
 
-      formData.photos.forEach((p, i) => {
-        if (y > 230) { 
-          addFooter();
-          doc.addPage(); 
-          y = 20; 
-        }
-        const col = i % 2;
-        const xPos = margin + (col * 92);
-        doc.setDrawColor(226, 232, 240);
-        doc.rect(xPos, y, 88, 72);
-        try { doc.addImage(p.dataUrl, 'JPEG', xPos + 1, y + 1, 86, 60, undefined, 'FAST'); } catch (e) {}
-        if (p.caption) {
-          doc.setFillColor(248, 250, 252);
-          doc.rect(xPos + 1, y + 62, 86, 9, 'F');
-          doc.setFontSize(7);
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(71, 85, 105);
-          const captionLines = doc.splitTextToSize(stripSpecialChars(p.caption), 82);
-          doc.text(captionLines, xPos + 3, y + 66.5);
-        }
-        if (col === 1 || i === formData.photos!.length - 1) { y += 78; }
+    const drawSectionTitle = (title: string, currentY: number) => {
+      doc.setFillColor(BG_SECTION[0], BG_SECTION[1], BG_SECTION[2]);
+      doc.rect(margin, currentY, pageWidth - (margin * 2), 10, 'F');
+      doc.setDrawColor(BLUE_PRIMARY[0], BLUE_PRIMARY[1], BLUE_PRIMARY[2]);
+      doc.setLineWidth(0.8);
+      doc.line(margin, currentY, margin, currentY + 10);
+      
+      doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text(title.toUpperCase(), margin + 5, currentY + 6.5);
+      return currentY + 16;
+    };
+
+    const drawInfoGrid = (data: {label: string, value: string}[], currentY: number) => {
+      const colWidth = (pageWidth - (margin * 2)) / 3;
+      doc.setFontSize(7);
+      doc.setTextColor(SLATE_LIGHT[0], SLATE_LIGHT[1], SLATE_LIGHT[2]);
+      doc.setFont("helvetica", "bold");
+      
+      data.forEach((item, i) => {
+        const col = i % 3;
+        const row = Math.floor(i / 3);
+        const xPos = margin + (col * colWidth);
+        const yPos = currentY + (row * 12);
+        
+        doc.text(stripSpecialChars(item.label).toUpperCase(), xPos, yPos);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
+        doc.text(stripSpecialChars(item.value || "-"), xPos, yPos + 5);
+        doc.setFontSize(7);
+        doc.setTextColor(SLATE_LIGHT[0], SLATE_LIGHT[1], SLATE_LIGHT[2]);
+        doc.setFont("helvetica", "bold");
       });
-      addFooter();
+      
+      return currentY + (Math.ceil(data.length / 3) * 15);
+    };
+
+    // --- Início da Geração ---
+    addHeader();
+    y = 55;
+
+    y = drawSectionTitle("Dados Gerais da Atividade", y);
+    y = drawInfoGrid([
+      { label: "Data de Execução", value: new Date(formData.date!).toLocaleDateString('pt-BR') },
+      { label: "Equipamento", value: formData.equipment! },
+      { label: "Localização", value: formData.local! },
+      { label: "Tipo Manutenção", value: formData.activityType! },
+      { label: "Status OM", value: formData.isFinished ? "FINALIZADA" : "EM ABERTO" },
+      { label: "Turno da Equipe", value: `Turno ${formData.teamShift}` }
+    ], y);
+
+    y += 5;
+    y = drawSectionTitle("Logística e Segurança", y);
+    y = drawInfoGrid([
+      { label: "Início Planejado", value: formData.startTime! },
+      { label: "Término Real", value: formData.endTime! },
+      { label: "Centro Trabalho", value: formData.workCenter! },
+      { label: "Desvio IAMO?", value: formData.iamoDeviation ? "SIM" : "NÃO" },
+      { label: "Possui Pendência?", value: formData.hasPendencies ? "SIM" : "NÃO" }
+    ], y);
+
+    if (formData.iamoDeviation) {
+      y += 2;
+      doc.setFillColor(254, 242, 242); // Rose-50
+      doc.roundedRect(margin, y, pageWidth - (margin * 2), 15, 1, 1, 'F');
+      doc.setFontSize(7);
+      doc.setTextColor(225, 29, 72); // Rose-600
+      doc.text("DESCRIÇÃO DO DESVIO IAMO", margin + 3, y + 5);
+      doc.setFontSize(9);
+      doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
+      doc.text(stripSpecialChars(formData.iamoDescription || "-"), margin + 3, y + 10);
+      y += 20;
+    } else {
+      y += 5;
     }
-    doc.save(`RELATORIO_OM_${formData.omNumber || 'PENDENTE'}.pdf`);
+
+    y = drawSectionTitle("Descrição Técnica (Escopo)", y);
+    doc.setFontSize(9);
+    doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
+    doc.setFont("helvetica", "normal");
+    const omDescLines = doc.splitTextToSize(stripSpecialChars(formData.omDescription!), pageWidth - (margin * 2) - 10);
+    doc.text(omDescLines, margin + 5, y);
+    y += (omDescLines.length * 5) + 10;
+
+    // Quebra de página se necessário
+    if (y > 220) {
+      doc.addPage();
+      addHeader();
+      y = 55;
+    }
+
+    y = drawSectionTitle("Execução Técnica Detalhada", y);
+    doc.setFontSize(9);
+    doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
+    const execLines = doc.splitTextToSize(stripSpecialChars(formData.activityExecuted!), pageWidth - (margin * 2) - 10);
+    doc.text(execLines, margin + 5, y);
+    y += (execLines.length * 5) + 12;
+
+    if (formData.hasPendencies) {
+      if (y > 250) { doc.addPage(); addHeader(); y = 55; }
+      doc.setFillColor(255, 251, 235); // Amber-50
+      doc.roundedRect(margin, y, pageWidth - (margin * 2), 15, 1, 1, 'F');
+      doc.setFontSize(7);
+      doc.setTextColor(217, 119, 6); // Amber-600
+      doc.text("PENDÊNCIAS REGISTRADAS", margin + 3, y + 5);
+      doc.setFontSize(9);
+      doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
+      doc.text(stripSpecialChars(formData.pendencyDescription || "-"), margin + 3, y + 10);
+      y += 20;
+    }
+
+    y = drawSectionTitle("Equipe Técnica", y);
+    doc.setFontSize(10);
+    doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
+    doc.text(stripSpecialChars(formData.technicians || "-"), margin + 5, y);
+    y += 15;
+
+    // Fotos em nova página
+    if (formData.photos?.length) {
+      doc.addPage();
+      addHeader();
+      y = 55;
+      y = drawSectionTitle("Evidências Fotográficas da Atividade", y);
+      
+      const imgWidth = 80;
+      const imgHeight = 60;
+      const gutter = 10;
+      
+      formData.photos.forEach((p, i) => {
+        if (y > 220) {
+          doc.addPage();
+          addHeader();
+          y = 55;
+          y = drawSectionTitle("Evidências Fotográficas (Cont.)", y);
+        }
+        
+        const col = i % 2;
+        const xPos = margin + (col * (imgWidth + gutter));
+        
+        // Frame da foto
+        doc.setDrawColor(BORDER_COLOR[0], BORDER_COLOR[1], BORDER_COLOR[2]);
+        doc.setLineWidth(0.2);
+        doc.rect(xPos, y, imgWidth, imgHeight + 12);
+        
+        try {
+          doc.addImage(p.dataUrl, 'JPEG', xPos + 1, y + 1, imgWidth - 2, imgHeight - 2, undefined, 'FAST');
+        } catch (e) {
+          doc.text("Erro ao carregar imagem", xPos + 5, y + 30);
+        }
+        
+        // Legenda
+        if (p.caption) {
+          doc.setFillColor(241, 245, 249);
+          doc.rect(xPos, y + imgHeight, imgWidth, 12, 'F');
+          doc.setFontSize(7);
+          doc.setTextColor(SLATE_LIGHT[0], SLATE_LIGHT[1], SLATE_LIGHT[2]);
+          const capLines = doc.splitTextToSize(stripSpecialChars(p.caption), imgWidth - 4);
+          doc.text(capLines, xPos + 2, y + imgHeight + 4.5);
+        }
+        
+        if (col === 1 || i === formData.photos!.length - 1) {
+          y += imgHeight + 20;
+        }
+      });
+    }
+
+    // Rodapé em todas as páginas
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      addFooter(i, pageCount);
+    }
+
+    doc.save(`RELATORIO_TECNICO_OM_${formData.omNumber || 'SEM_NUMERO'}.pdf`);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-dark-bg pb-32 text-slate-800 dark:text-white transition-colors">
-      <nav className="sticky top-0 z-30 bg-white dark:bg-dark-card border-b dark:border-dark-border px-4 py-3 flex items-center gap-3 shadow-md">
+    <div className="min-h-screen bg-slate-50 dark:bg-dark-bg pb-28 text-slate-800 dark:text-white transition-colors">
+      <nav className="sticky top-0 z-30 bg-white/90 dark:bg-dark-card/90 backdrop-blur-md border-b dark:border-dark-border px-4 py-3 flex items-center gap-3 shadow-md">
         <button onClick={() => navigate('/')} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-dark-bg transition-colors"><ChevronLeft className="dark:text-white w-6 h-6" /></button>
-        <div>
-          <h1 className="text-[10px] font-black uppercase tracking-widest text-blue-600">RELATÓRIO DE EXECUÇÃO</h1>
-          <p className="font-extrabold text-sm leading-none text-slate-800 dark:text-white">AUTOMAÇÃO MINA SERRA SUL</p>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-[9px] font-black uppercase tracking-widest text-blue-600 truncate">RELATÓRIO DE EXECUÇÃO</h1>
+          <p className="font-extrabold text-sm leading-none text-slate-800 dark:text-white truncate">S11D SERRA SUL</p>
         </div>
       </nav>
 
@@ -1179,7 +1280,7 @@ AUTOMAÇÃO MINA SERRA SUL
           <div className="bg-rose-50 dark:bg-rose-900/10 border-2 border-rose-500/20 p-4 rounded-3xl animate-in slide-in-from-top duration-300">
             <div className="flex items-center gap-2.5 mb-2.5">
               <AlertTriangle className="w-4 h-4 text-rose-600" />
-              <span className="font-black text-[11px] uppercase dark:text-white">Atenção: Campos Pendentes</span>
+              <span className="font-black text-[11px] uppercase dark:text-white">Campos Pendentes</span>
             </div>
             <div className="flex flex-wrap gap-2">
               {validationErrors.map((e, i) => <span key={i} className="px-3 py-1 bg-white dark:bg-dark-bg rounded-lg text-[10px] font-black text-rose-600 uppercase border border-rose-100">{e}</span>)}
@@ -1187,7 +1288,7 @@ AUTOMAÇÃO MINA SERRA SUL
           </div>
         )}
 
-        <div className="bg-white dark:bg-dark-card rounded-[2rem] border border-slate-200 dark:border-dark-border shadow-md overflow-hidden p-5 space-y-6">
+        <div className="bg-white dark:bg-dark-card rounded-[2rem] border border-slate-200 dark:border-dark-border shadow-md overflow-hidden p-4 sm:p-5 space-y-6">
           
           {/* 1. Identificação */}
           <div className="flex flex-col gap-4">
@@ -1196,7 +1297,7 @@ AUTOMAÇÃO MINA SERRA SUL
               <h3 className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">📍 Identificação</h3>
             </div>
             
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <CompactInput label="🗓️ Data" type="date" value={formData.date!} onChange={v => setFormData(p => ({...p, date: v}))} required disabled={isNew} icon={<Calendar className="w-4 h-4" />} />
               <CompactInput label="🚜 Equipamento" value={formData.equipment!} onChange={v => setFormData(p => ({...p, equipment: v}))} required placeholder="Ex: PC200" disabled={isNew} icon={<Zap className="w-4 h-4" />} />
             </div>
@@ -1211,12 +1312,12 @@ AUTOMAÇÃO MINA SERRA SUL
               <h3 className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">📂 Manutenção</h3>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <CompactInput label="📂 N° OM" value={formData.omNumber!} onChange={v => setFormData(p => ({...p, omNumber: v}))} required placeholder="Número OM" disabled={isNew} icon={<Hash className="w-4 h-4" />} />
 
               <div className={`flex flex-col gap-1 ${isNew ? 'opacity-60' : ''}`}>
                 <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🛠️ Tipo</label>
-                <select disabled={isNew} value={formData.activityType} onChange={e => setFormData(p => ({...p, activityType: e.target.value as any}))} className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-dark-border bg-white dark:bg-dark-card dark:text-white text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-blue-100">
+                <select disabled={isNew} value={formData.activityType} onChange={e => setFormData(p => ({...p, activityType: e.target.value as any}))} className="w-full px-3 py-3 rounded-xl border border-slate-300 dark:border-dark-border bg-white dark:bg-dark-card dark:text-white text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-blue-100 min-h-[48px]">
                   <option value="preventiva">Preventiva</option>
                   <option value="corretiva">Corretiva</option>
                 </select>
@@ -1238,7 +1339,7 @@ AUTOMAÇÃO MINA SERRA SUL
 
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🛑 Desvio IAMO?</label>
-              <button disabled={isNew} onClick={() => setFormData(p => ({...p, iamoDeviation: !p.iamoDeviation}))} className={`w-full py-3 rounded-xl text-[11px] font-black transition-all border-2 flex items-center justify-center gap-2 ${formData.iamoDeviation ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-500 text-rose-600' : 'bg-slate-50 dark:bg-dark-bg border-slate-200 dark:border-dark-border text-slate-400'}`}>
+              <button disabled={isNew} onClick={() => setFormData(p => ({...p, iamoDeviation: !p.iamoDeviation}))} className={`w-full py-3.5 rounded-xl text-[11px] font-black transition-all border-2 flex items-center justify-center gap-2 min-h-[48px] ${formData.iamoDeviation ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-500 text-rose-600' : 'bg-slate-50 dark:bg-dark-bg border-slate-200 dark:border-dark-border text-slate-400'}`}>
                 {formData.iamoDeviation ? 'OCORRÊNCIA REGISTRADA' : 'SEM DESVIOS'}
               </button>
             </div>
@@ -1266,16 +1367,16 @@ AUTOMAÇÃO MINA SERRA SUL
               <h3 className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">🏁 Finalização</h3>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🎯 Concluída?</label>
-                <button onClick={() => setFormData(p => ({...p, isFinished: !p.isFinished}))} className={`w-full py-3 rounded-xl text-[11px] font-black transition-all border-2 ${formData.isFinished ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-500 text-emerald-600' : 'bg-amber-50 dark:bg-amber-900/10 border-amber-500 text-amber-600'}`}>
+                <button onClick={() => setFormData(p => ({...p, isFinished: !p.isFinished}))} className={`w-full py-3.5 rounded-xl text-[10px] sm:text-[11px] font-black transition-all border-2 min-h-[48px] ${formData.isFinished ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-500 text-emerald-600' : 'bg-amber-50 dark:bg-amber-900/10 border-amber-500 text-amber-600'}`}>
                   {formData.isFinished ? 'CONCLUÍDA' : 'EM ANDAMENTO'}
                 </button>
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🔔 Pendências?</label>
-                <button onClick={() => setFormData(p => ({...p, hasPendencies: !p.hasPendencies}))} className={`w-full py-3 rounded-xl text-[11px] font-black transition-all border-2 ${formData.hasPendencies ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-500 text-rose-600' : 'bg-slate-50 dark:bg-dark-bg border-slate-200 dark:border-dark-border text-slate-400'}`}>
+                <button onClick={() => setFormData(p => ({...p, hasPendencies: !p.hasPendencies}))} className={`w-full py-3.5 rounded-xl text-[10px] sm:text-[11px] font-black transition-all border-2 min-h-[48px] ${formData.hasPendencies ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-500 text-rose-600' : 'bg-slate-50 dark:bg-dark-bg border-slate-200 dark:border-dark-border text-slate-400'}`}>
                   {formData.hasPendencies ? 'COM PENDÊNCIA' : 'SEM PENDÊNCIA'}
                 </button>
               </div>
@@ -1287,13 +1388,13 @@ AUTOMAÇÃO MINA SERRA SUL
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">📈 Turno</label>
-                <select value={formData.teamShift} onChange={e => setFormData(p => ({...p, teamShift: e.target.value as Shift, technicians: ''}))} className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-dark-border bg-white dark:bg-dark-card dark:text-white text-sm font-bold shadow-sm outline-none">
+                <select value={formData.teamShift} onChange={e => setFormData(p => ({...p, teamShift: e.target.value as Shift, technicians: ''}))} className="w-full px-3 py-3 rounded-xl border border-slate-300 dark:border-dark-border bg-white dark:bg-dark-card dark:text-white text-sm font-bold shadow-sm outline-none min-h-[48px]">
                   {SHIFTS.map(s => <option key={s} value={s}>Turno {s}</option>)}
                 </select>
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🔖 C. Trabalho</label>
-                <select value={formData.workCenter} onChange={e => setFormData(p => ({...p, workCenter: e.target.value as WorkCenter}))} className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-dark-border bg-white dark:bg-dark-card dark:text-white text-sm font-bold shadow-sm outline-none">
+                <select value={formData.workCenter} onChange={e => setFormData(p => ({...p, workCenter: e.target.value as WorkCenter}))} className="w-full px-3 py-3 rounded-xl border border-slate-300 dark:border-dark-border bg-white dark:bg-dark-card dark:text-white text-sm font-bold shadow-sm outline-none min-h-[48px]">
                   {WORK_CENTERS.map(wc => <option key={wc} value={wc}>{wc}</option>)}
                 </select>
               </div>
@@ -1305,7 +1406,7 @@ AUTOMAÇÃO MINA SERRA SUL
                 {TECHNICIANS_BY_SHIFT[formData.teamShift! || 'A'].map(name => {
                   const isSelected = formData.technicians?.includes(name);
                   return (
-                    <button key={name} onClick={() => toggleTechnician(name)} className={`px-3 py-2 rounded-xl text-xs font-bold border-2 transition-all flex items-center gap-2 ${isSelected ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white dark:bg-dark-card border-slate-200 dark:border-dark-border text-slate-600 dark:text-slate-400'}`}>
+                    <button key={name} onClick={() => toggleTechnician(name)} className={`px-4 py-2.5 rounded-xl text-xs font-bold border-2 transition-all flex items-center gap-2 min-h-[40px] ${isSelected ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white dark:bg-dark-card border-slate-200 dark:border-dark-border text-slate-600 dark:text-slate-400 active:bg-slate-100'}`}>
                       {isSelected && <CheckCircle2 className="w-3.5 h-3.5" />}
                       {name}
                     </button>
@@ -1315,7 +1416,7 @@ AUTOMAÇÃO MINA SERRA SUL
 
               <div className="flex flex-wrap gap-2">
                 {formData.technicians?.split(', ').filter(name => name && !TECHNICIANS_BY_SHIFT[formData.teamShift! || 'A'].includes(name)).map(name => (
-                  <button key={name} onClick={() => toggleTechnician(name)} className="px-3 py-2 rounded-xl text-xs font-bold border-2 transition-all flex items-center gap-2 bg-indigo-600 border-indigo-600 text-white shadow-md">
+                  <button key={name} onClick={() => toggleTechnician(name)} className="px-4 py-2.5 rounded-xl text-xs font-bold border-2 transition-all flex items-center gap-2 bg-indigo-600 border-indigo-600 text-white shadow-md">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     {name}
                   </button>
@@ -1325,17 +1426,17 @@ AUTOMAÇÃO MINA SERRA SUL
               <div className="flex gap-2 items-end mt-1">
                 <div className="flex-1">
                   <CompactInput 
-                    label="👤 Adicionar Outro Técnico" 
+                    label="👤 Outro Técnico" 
                     value={customTechnician} 
                     onChange={setCustomTechnician} 
-                    placeholder="Nome completo..."
+                    placeholder="Nome..."
                     icon={<UserPlus className="w-4 h-4" />}
                   />
                 </div>
                 <button 
                   onClick={addCustomTechnician} 
                   disabled={!customTechnician.trim()}
-                  className="bg-slate-100 dark:bg-dark-bg p-2.5 rounded-xl text-blue-600 disabled:opacity-40 active:scale-90 transition-all border border-slate-200 dark:border-dark-border"
+                  className="bg-slate-100 dark:bg-dark-bg h-[48px] w-[48px] rounded-xl text-blue-600 disabled:opacity-40 active:scale-90 transition-all border border-slate-200 dark:border-dark-border flex items-center justify-center"
                 >
                   <Plus className="w-6 h-6" />
                 </button>
@@ -1350,9 +1451,9 @@ AUTOMAÇÃO MINA SERRA SUL
                <h3 className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">📸 Registro Fotográfico</h3>
              </div>
              <div className="grid grid-cols-2 gap-3">
-               <button onClick={() => fileInputRef.current?.click()} className="py-6 border-2 border-dashed rounded-[1.5rem] border-slate-300 dark:border-dark-border text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex flex-col items-center shadow-sm">
+               <button onClick={() => fileInputRef.current?.click()} className="py-5 sm:py-6 border-2 border-dashed rounded-[1.5rem] border-slate-300 dark:border-dark-border text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex flex-col items-center shadow-sm active:bg-slate-100">
                   <ImageIcon className="w-6 h-6 mb-2" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Galeria</span>
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Galeria</span>
                   <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={(e) => {
                     if (!e.target.files) return;
                     Array.from(e.target.files).forEach((file: File) => {
@@ -1362,9 +1463,9 @@ AUTOMAÇÃO MINA SERRA SUL
                     });
                   }} />
                </button>
-               <button onClick={() => cameraInputRef.current?.click()} className="py-6 border-2 border-dashed rounded-[1.5rem] border-slate-300 dark:border-dark-border text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex flex-col items-center shadow-sm">
+               <button onClick={() => cameraInputRef.current?.click()} className="py-5 sm:py-6 border-2 border-dashed rounded-[1.5rem] border-slate-300 dark:border-dark-border text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex flex-col items-center shadow-sm active:bg-slate-100">
                   <Camera className="w-6 h-6 mb-2" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Câmera</span>
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Câmera</span>
                   <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => {
                     if (!e.target.files) return;
                     Array.from(e.target.files).forEach((file: File) => {
@@ -1378,16 +1479,16 @@ AUTOMAÇÃO MINA SERRA SUL
              <div className="space-y-4">
                {formData.photos?.map(p => (
                  <div key={p.id} className="bg-slate-50 dark:bg-dark-bg p-3 rounded-2xl border border-slate-200 dark:border-dark-border flex gap-3 shadow-sm">
-                   <div className="relative w-24 aspect-square rounded-xl overflow-hidden bg-slate-200 flex-shrink-0 shadow-inner">
+                   <div className="relative w-20 sm:w-24 aspect-square rounded-xl overflow-hidden bg-slate-200 flex-shrink-0 shadow-inner">
                      <img src={p.dataUrl} className="w-full h-full object-cover" />
                      <button onClick={() => setFormData(prev => ({...prev, photos: prev.photos?.filter(ph => ph.id !== p.id)}))} className="absolute top-1.5 right-1.5 bg-rose-600/90 text-white p-1 rounded-lg shadow-md active:scale-90 transition-all"><X className="w-4 h-4" /></button>
                    </div>
-                   <div className="flex-1 flex flex-col gap-2 py-1">
-                     <div className="flex justify-between items-center">
-                       <span className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">Legenda e Edição</span>
-                       <button onClick={() => setEditingPhoto(p)} className="text-blue-600 text-[10px] font-black uppercase flex items-center gap-1 active:scale-95 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-lg">Desenhar <Edit3 className="w-3 h-3" /></button>
+                   <div className="flex-1 flex flex-col gap-2 py-1 min-w-0">
+                     <div className="flex justify-between items-center gap-2">
+                       <span className="text-[9px] font-black text-slate-500 uppercase truncate">Legenda</span>
+                       <button onClick={() => setEditingPhoto(p)} className="text-blue-600 text-[9px] font-black uppercase flex items-center gap-1 active:scale-95 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-lg whitespace-nowrap">Desenhar <Edit3 className="w-3 h-3" /></button>
                      </div>
-                     <input placeholder="Ex: Painel após manutenção..." value={p.caption || ''} onChange={(e) => updatePhotoCaption(p.id, e.target.value)} className="w-full bg-white dark:bg-dark-card border border-slate-300 dark:border-dark-border rounded-xl px-3 py-2 text-xs font-semibold dark:text-white outline-none focus:ring-2 focus:ring-blue-100" />
+                     <input placeholder="Ex: Painel..." value={p.caption || ''} onChange={(e) => updatePhotoCaption(p.id, e.target.value)} className="w-full bg-white dark:bg-dark-card border border-slate-300 dark:border-dark-border rounded-xl px-3 py-2 text-xs font-semibold dark:text-white outline-none focus:ring-2 focus:ring-blue-100" />
                    </div>
                  </div>
                ))}
@@ -1395,26 +1496,26 @@ AUTOMAÇÃO MINA SERRA SUL
           </div>
 
           {formData.type === 'report' && (
-            <div className="grid grid-cols-2 gap-3 pt-4 border-t dark:border-dark-border">
-              <Button onClick={generatePDF} variant="secondary" className="h-12 text-xs uppercase tracking-widest col-span-2 shadow-sm">
-                <Download className="w-4 h-4" /> Exportar PDF Completo
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 border-t dark:border-dark-border">
+              <Button onClick={generatePDF} variant="secondary" className="h-12 text-[11px] uppercase tracking-widest sm:col-span-2 shadow-sm">
+                <Download className="w-4 h-4" /> Exportar PDF
               </Button>
-              <Button onClick={shareViaWhatsApp} variant="success" className="h-14 text-sm uppercase font-black col-span-2 shadow-emerald-100/50">
-                <MessageCircle className="w-5 h-5" /> Enviar Tudo via WhatsApp
+              <Button onClick={shareViaWhatsApp} variant="success" className="h-14 text-sm uppercase font-black sm:col-span-2 shadow-emerald-100/50">
+                <MessageCircle className="w-5 h-5" /> Enviar WhatsApp
               </Button>
             </div>
           )}
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 dark:bg-dark-bg/90 backdrop-blur-md border-t dark:border-dark-border flex justify-center z-40 safe-area-bottom shadow-2xl">
-        <div className="w-full max-w-2xl flex gap-3">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 dark:bg-dark-bg/80 backdrop-blur-md border-t dark:border-dark-border flex justify-center z-40 safe-area-bottom shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
+        <div className="w-full max-w-2xl flex gap-3 pb-safe">
           {isNew ? (
-            <Button onClick={() => handleAction('template')} className="w-full h-14 rounded-2xl shadow-lg text-base">💾 Salvar Modelo Base</Button>
+            <Button onClick={() => handleAction('template')} className="w-full h-14 rounded-2xl shadow-lg text-base">💾 Salvar Modelo</Button>
           ) : formData.type === 'template' ? (
-            <Button onClick={() => handleAction('report')} variant="success" className="w-full h-14 rounded-2xl shadow-lg text-base">🛠️ Iniciar Atividade</Button>
+            <Button onClick={() => handleAction('report')} variant="success" className="w-full h-14 rounded-2xl shadow-lg text-base">🛠️ Iniciar Turno</Button>
           ) : (
-            <Button onClick={() => handleAction('report')} variant="primary" className="w-full h-14 rounded-2xl shadow-lg text-base">✅ Finalizar Relatório</Button>
+            <Button onClick={() => handleAction('report')} variant="primary" className="w-full h-14 rounded-2xl shadow-lg text-base">✅ Concluir OM</Button>
           )}
         </div>
       </div>
