@@ -8,7 +8,7 @@ import {
   Download, 
   Share2, 
   Camera, 
-  ImageIcon,
+  Image as ImageIcon,
   CheckCircle2,
   User as UserIcon,
   ArrowRight,
@@ -40,19 +40,10 @@ import {
   LogOut,
   ArrowLeft,
   Truck,
-  Cpu,
-  Layers,
-  Wrench,
-  Anchor,
-  Square,
-  CheckSquare,
-  Wifi,
-  WifiOff,
-  RefreshCw,
-  Search
+  Wrench
 } from 'lucide-react';
 import { storage } from './services/storage';
-import { Report, Shift, ReportType, ReportPhoto, WorkCenter, UserSession, User } from './types';
+import { Report, Shift, ReportType, ReportPhoto, WorkCenter, UserSession, User, ReportCategory } from './types';
 import { SHIFTS, WORK_CENTERS, TECHNICIANS_BY_SHIFT } from './constants';
 import { jsPDF } from 'jspdf';
 
@@ -71,12 +62,148 @@ const useTheme = () => {
   return context;
 };
 
-// --- Modelos de Início de Turno Padrão (Limpos) ---
+// --- Modelos de Início de Turno Padrão ---
 const DEFAULT_SHIFT_TEMPLATES = {
-  'A': `📣 INÍCIO DE TURNO - EQUIPE A\n🗓 Data: {{date}}\n\n📋 Tema DSS:\n📍 Local:\n⛑ Palestrante:\n📈 Atividades:\n🗣️ Participantes:`,
-  'B': `📣 INÍCIO DE TURNO - EQUIPE B\n🗓 Data: {{date}}\n\n📋 Tema DSS:\n📍 Local:\n⛑ Palestrante:\n📈 Atividades:\n🗣️ Participantes:`,
-  'C': `📣 INÍCIO DE TURNO - EQUIPE C\n🗓 Data: {{date}}\n\n📋 Tema DSS:\n📍 Local:\n⛑ Palestrante:\n📈 Atividades:\n🗣️ Participantes:`,
-  'D': `📣 INÍCIO DE TURNO - EQUIPE D\n🗓 Data: {{date}}\n\n📋 Tema DSS:\n📍 Local:\n⛑ Palestrante:\n📈 Atividades:\n🗣️ Participantes:`
+  'A': `📣 Evento: Boa Jornada ✅  
+📋 Tema: Atividades relacionadas ao turno.
+📍 Local: Contêiner Automação de Mina
+🗓 Data: {{date}}
+⛑ Palestrantes: Todos
+📈 Realizado o DSS com equipe do Turno D
+🗣️ Participantes Equipe SONDA/SOTREQ/HEXAGON/CREARE
+
+Boa dia pessoal, estamos assumindo as demandas do Turno A.
+Bom descanso para o turno B.
+
+Vale: 
+Ilton
+
+Equipe Sonda:
+Truckulles 
+Hannyel 
+Misael
+
+Móveis 
+Eduardo 
+Marcos 
+
+Sotreq: 
+Diran 
+
+Hexagon:
+Alcino
+
+Creare:
+Assuero
+
+Alcon:
+Kesia`,
+  'B': `📣 Evento: Boa Jornada ✅  
+📋 Tema: Atividades relacionadas ao turno.
+📍 Local: Contêiner Automação de Mina
+🗓 Data: {{date}}
+⛑ Palestrantes: Todos
+📈 Realizado o DSS com equipe do turno B
+🗣️ Participantes Equipe SONDA/SOTREQ/HEXAGON/ALCON/CREARE
+
+Boa noite pessoal, estamos assumindo as atividades do Turno B, ao Turno A bom descanso!!!
+
+Equipes Mobilizadas. 
+
+SONDA
+
+EQ. Fixos
+Luiz Gustavo 
+Rafael
+
+EQ. Móveis
+Jeferson 
+Geneilsom 
+
+Sotreq
+Mauro 
+
+Hexagon
+Luiz Neto
+
+Creare
+Vitor
+
+Vale
+Alessandra`,
+  'C': `📣 Evento: Boa Jornada ✅  
+📋 Tema: Atividades relacionadas ao turno.
+📍 Local: Contêiner Automação de Mina
+🗓 Data: {{date}}
+⛑ Palestrantes: Todos
+📈 Realizado o DSS com equipe do Turno C
+🗣️ Participantes Equipe SONDA/SOTREQ/HEXAGON/VALE/CREARE
+
+Bom dia pessoal, estamos assumindo as atividades do Turno C, ao Turno D bom descanso!!
+
+* Equipes Mobilizadas
+
+* SONDA
+
+* Téc. Controle
+* Camila ADM
+
+* Eq. Truckless
+* Marcos
+* Wanderson  
+
+* Eq. Móveis
+* Wilian 
+* Gustavo  
+
+* Sotreq
+* Joao leno
+
+* Hexagon
+* Patrick 
+* Jhon Dultra 
+
+* Alcon
+* Fabricio 
+
+* Creare
+* Victor  
+
+* Vale
+* Daniel Alves`,
+  'D': `📣 Evento: Boa Jornada ✅  
+📋 Tema: Atividades relacionadas ao turno.
+📍 Local: Contêiner Automação de Mina
+🗓 Data: {{date}}
+⛑ Palestrantes: Todos
+📈 Realizado o DSS com equipe do Turno D
+🗣️ Participantes Equipe SONDA/SOTREQ/HEXAGON/CREARE
+
+Boa noite galera, estamos assumindo as atividades do Turno D, ao Turno C bom descanso!!
+
+Equipes Mobilizadas
+
+SONDA
+
+EQ. Fixos
+Doclenio
+Geraldo
+
+EQ. Móveis
+Darlan
+Cícero 
+
+Sotreq
+Thiago
+
+Hexagon
+Rodrigo
+
+Creare
+Hitalo
+
+Vale
+Renato`
 };
 
 // --- Utilitários ---
@@ -85,7 +212,7 @@ const stripSpecialChars = (text: string) => {
   return text
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^\x20-\x7E\s\xA1-\xFF]/g, "") 
+    .replace(/[^\x20-\x7E\s]/g, "")
     .trim();
 };
 
@@ -99,89 +226,6 @@ const sendToWhatsApp = (message: string) => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-};
-
-// --- Helper para renderizar Emojis como Imagem no PDF ---
-const renderEmojiToDataUrl = (emoji: string): string | null => {
-  try {
-    const canvas = document.createElement('canvas');
-    canvas.width = 64;
-    canvas.height = 64;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-    ctx.font = "48px sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(emoji, 32, 32);
-    return canvas.toDataURL('image/png');
-  } catch (e) {
-    return null;
-  }
-};
-
-// --- Componente de Status de Conexão ---
-const ConnectionBadge = () => {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  return (
-    <div className={`px-2.5 py-1 rounded-full flex items-center gap-1.5 transition-all ${isOnline ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'}`}>
-      {isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-      <span className="text-[9px] font-black uppercase tracking-widest">{isOnline ? 'Online' : 'Offline'}</span>
-    </div>
-  );
-};
-
-// --- Monitor de Atualização PWA ---
-const UpdateManager = () => {
-  const [showUpdate, setShowUpdate] = useState(false);
-
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.ready.then((registration) => {
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          newWorker?.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              setShowUpdate(true);
-            }
-          });
-        });
-      });
-    }
-  }, []);
-
-  if (!showUpdate) return null;
-
-  return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[300] w-[90%] max-w-sm bg-blue-600 text-white p-4 rounded-3xl shadow-2xl flex items-center justify-between gap-4 animate-in slide-in-from-top-10 duration-500">
-      <div className="flex items-center gap-3">
-        <div className="bg-white/20 p-2 rounded-xl">
-          <RefreshCw className="w-5 h-5 animate-spin-slow" />
-        </div>
-        <div className="flex flex-col">
-          <span className="text-sm font-black uppercase tracking-tight">Nova Versão!</span>
-          <span className="text-[10px] opacity-80 font-bold">O app foi atualizado.</span>
-        </div>
-      </div>
-      <button 
-        onClick={() => window.location.reload()}
-        className="px-4 py-2 bg-white text-blue-600 rounded-xl text-xs font-black uppercase tracking-widest shadow-sm active:scale-95 transition-all"
-      >
-        Atualizar
-      </button>
-    </div>
-  );
 };
 
 // --- Componentes de UI ---
@@ -582,7 +626,7 @@ const ImageEditor: React.FC<{
 
     const rect = canvasRef.current.getBoundingClientRect();
     const x = ('touches' in e) ? e.touches[0].clientX - rect.left : (e as React.MouseEvent).clientX - rect.left;
-    const y = ('touches' in e) ? e.touches[0].clientY - rect.top : (e as React.MouseEvent).clientX - rect.top;
+    const y = ('touches' in e) ? e.touches[0].clientY - rect.top : (e as React.MouseEvent).clientY - rect.top;
 
     ctx.lineTo(x, y);
     ctx.stroke();
@@ -618,16 +662,21 @@ const HomePage = () => {
   const location = useLocation();
   const [reports, setReports] = useState<Report[]>([]);
   const [activeTab, setActiveTab] = useState<ReportType>('template');
+  const [activeCategory, setActiveCategory] = useState<ReportCategory>('fixos');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   
+  // Modelos de Início de Turno Editáveis
   const [shiftTemplates, setShiftTemplates] = useState<Record<string, string>>(DEFAULT_SHIFT_TEMPLATES);
   const [editingShift, setEditingShift] = useState<string | null>(null);
   const [tempTemplate, setTempTemplate] = useState("");
 
   useEffect(() => {
-    const state = location.state as { tab?: ReportType } | null;
+    // Seed default ready-made templates
+    storage.seedDefaultTemplates();
+
+    const state = location.state as { tab?: ReportType, category?: ReportCategory } | null;
     if (state?.tab) setActiveTab(state.tab);
+    if (state?.category) setActiveCategory(state.category);
   }, [location]);
 
   useEffect(() => {
@@ -662,15 +711,7 @@ const HomePage = () => {
     }
   };
 
-  const filteredReports = reports.filter(r => 
-    r.type === activeTab && 
-    (
-      r.omDescription?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.omNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.equipment?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.local?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  );
+  const filteredReports = reports.filter(r => r.type === activeTab && (r.category === activeCategory || !r.category));
 
   return (
     <div className="flex flex-col gap-5 p-5 max-w-2xl mx-auto w-full pb-20">
@@ -686,44 +727,36 @@ const HomePage = () => {
           </button>
           <div>
             <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">ReportMaster</h1>
-            <div className="flex items-center gap-2 mt-0.5">
-               <p className="text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest leading-none">S11D - Serra Sul</p>
-               <ConnectionBadge />
-            </div>
+            <p className="text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-widest leading-none">S11D - Serra Sul</p>
           </div>
         </div>
       </header>
 
-      <div className="bg-slate-200 dark:bg-dark-card p-1 rounded-xl flex shadow-inner overflow-x-auto gap-1">
-        <button onClick={() => { setActiveTab('template'); setSearchQuery(''); }} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-[10px] font-black transition-all uppercase ${activeTab === 'template' ? 'bg-white dark:bg-dark-bg text-blue-600 shadow-sm' : 'text-slate-600 dark:text-slate-400 opacity-70'}`}>Meus Modelos</button>
-        <button onClick={() => { setActiveTab('report'); setSearchQuery(''); }} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-[10px] font-black transition-all uppercase ${activeTab === 'report' ? 'bg-white dark:bg-dark-bg text-emerald-600 shadow-sm' : 'text-slate-600 dark:text-slate-400 opacity-70'}`}>Relatórios</button>
-        <button onClick={() => { setActiveTab('shift_start'); setSearchQuery(''); }} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-[10px] font-black transition-all uppercase ${activeTab === 'shift_start' ? 'bg-white dark:bg-dark-bg text-purple-600 shadow-sm' : 'text-slate-600 dark:text-slate-400 opacity-70'}`}>Início de Turno</button>
+      {/* Abas de Categoria (FIXOS / MÓVEIS) */}
+      <div className="flex gap-2 p-1 bg-slate-100 dark:bg-dark-card rounded-2xl shadow-inner">
+        <button 
+          onClick={() => setActiveCategory('fixos')}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all font-black text-xs uppercase tracking-widest ${activeCategory === 'fixos' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400'}`}
+        >
+          <Wrench className="w-4 h-4" /> FIXOS
+        </button>
+        <button 
+          onClick={() => setActiveCategory('moveis')}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all font-black text-xs uppercase tracking-widest ${activeCategory === 'moveis' ? 'bg-amber-500 text-white shadow-lg' : 'text-slate-400'}`}
+        >
+          <Truck className="w-4 h-4" /> MÓVEIS
+        </button>
       </div>
 
-      {activeTab !== 'shift_start' && (
-        <div className="relative group animate-in fade-in slide-in-from-top-4 duration-500">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Buscar por OM, equipamento ou local..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-11 pr-11 py-3 bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border rounded-2xl text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/20 transition-all shadow-sm dark:text-white"
-          />
-          {searchQuery && (
-            <button 
-              onClick={() => setSearchQuery('')}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-500 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      )}
+      <div className="bg-slate-200 dark:bg-dark-card p-1 rounded-xl flex shadow-inner overflow-x-auto gap-1">
+        <button onClick={() => setActiveTab('template')} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-[10px] font-black transition-all uppercase ${activeTab === 'template' ? 'bg-white dark:bg-dark-bg text-blue-600 shadow-sm' : 'text-slate-600 dark:text-slate-400 opacity-70'}`}>Meus Modelos</button>
+        <button onClick={() => setActiveTab('report')} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-[10px] font-black transition-all uppercase ${activeTab === 'report' ? 'bg-white dark:bg-dark-bg text-emerald-600 shadow-sm' : 'text-slate-600 dark:text-slate-400 opacity-70'}`}>Relatórios</button>
+        <button onClick={() => setActiveTab('shift_start')} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-[10px] font-black transition-all uppercase ${activeTab === 'shift_start' ? 'bg-white dark:bg-dark-bg text-purple-600 shadow-sm' : 'text-slate-600 dark:text-slate-400 opacity-70'}`}>Início de Turno</button>
+      </div>
 
       {activeTab === 'template' && (
-        <Button onClick={() => navigate('/new')} className="h-14 rounded-xl text-base shadow-lg">
-          <Plus className="w-5 h-5" /> Criar Novo Modelo
+        <Button onClick={() => navigate('/new', { state: { category: activeCategory, type: 'template' } })} className="h-14 rounded-xl text-base shadow-lg">
+          <Plus className="w-5 h-5" /> Criar Novo Modelo {activeCategory === 'fixos' ? 'FIXO' : 'MÓVEL'}
         </Button>
       )}
 
@@ -748,7 +781,7 @@ const HomePage = () => {
                     onClick={() => {
                       const today = new Date().toLocaleDateString('pt-BR');
                       const template = shiftTemplates[shift];
-                      const message = `INFORME DE INCIO DE TURNO\n\n${template.replace('{{date}}', today)}`;
+                      const message = `INFORME DE INÍCIO DE TURNO\n\n${template.replace('{{date}}', today)}`;
                       sendToWhatsApp(message);
                     }}
                     className="bg-purple-600 text-white p-2.5 rounded-xl shadow-lg shadow-purple-200 dark:shadow-none active:scale-90 transition-all"
@@ -797,14 +830,13 @@ const HomePage = () => {
               <div className="flex items-center gap-4 mt-2 text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">
                 <span className="flex items-center gap-1.5"><Calendar className="w-3 h-3 text-blue-500" /> {new Date(report.date).toLocaleDateString('pt-BR')}</span>
                 <span className="flex items-center gap-1.5"><Briefcase className="w-3 h-3 text-blue-500" /> {report.activityType}</span>
-                {report.equipment && <span className="flex items-center gap-1.5 ml-auto text-blue-600"><Zap className="w-3 h-3" /> {report.equipment}</span>}
               </div>
               <button onClick={(e) => handleDelete(e, report.id)} className="absolute top-4 right-3 text-slate-300 dark:text-slate-600 hover:text-rose-600 transition-colors p-1"><Trash2 className="w-5 h-5" /></button>
             </div>
           ))}
           {filteredReports.length === 0 && (
              <div className="py-12 text-center text-slate-400 dark:text-slate-500 text-xs font-bold border-2 border-dashed border-slate-200 dark:border-dark-border rounded-3xl opacity-60">
-               {searchQuery ? 'Nenhum resultado para sua busca.' : 'Nenhum item encontrado.'}
+               Nenhum item encontrado na categoria {activeCategory}.
              </div>
           )}
         </div>
@@ -816,6 +848,7 @@ const HomePage = () => {
 const ReportFormPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const location = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const autoSaveTimerRef = useRef<number | null>(null);
@@ -827,7 +860,8 @@ const ReportFormPage = () => {
   
   const [formData, setFormData] = useState<Partial<Report>>({
     id: crypto.randomUUID(), 
-    type: 'template',
+    type: (location.state as any)?.type || 'template', 
+    category: (location.state as any)?.category || 'fixos',
     omDescription: '', 
     activityExecuted: '', 
     date: new Date().toISOString().split('T')[0], 
@@ -907,11 +941,11 @@ const ReportFormPage = () => {
       storage.saveReport(templateToUpdate);
       const newReportEntry = { ...formData, id: crypto.randomUUID(), type: 'report', date: new Date().toISOString().split('T')[0], updatedAt: Date.now(), createdAt: Date.now() } as Report;
       storage.saveReport(newReportEntry);
-      navigate('/', { state: { tab: 'report' } });
+      navigate(`/edit/${newReportEntry.id}`, { replace: true });
     } else {
       const finalReport = { ...formData, type: saveType, updatedAt: Date.now() } as Report;
       storage.saveReport(finalReport);
-      navigate('/', { state: { tab: saveType } });
+      navigate('/', { state: { tab: saveType, category: formData.category } });
     }
   };
 
@@ -948,279 +982,178 @@ const ReportFormPage = () => {
     }
   };
 
+  const shareViaWhatsApp = () => {
+    const message = `RELATÓRIO DE EXECUÇÃO
+AUTOMAÇÃO MINA SERRA SUL
+
+🗓️ Data: ${formData.date ? new Date(formData.date).toLocaleDateString('pt-BR') : ''}
+🚜 Equipamento: ${formData.equipment || ''}
+📌 Local: ${formData.local || ''}
+
+📂 N° OM: ${formData.omNumber || ''}
+
+🛠️ Tipo de Atividade: ${formData.activityType?.toUpperCase() || ''}
+
+⏰ Horário Inicial: ${formData.startTime || ''}
+⏰ Horario final: ${formData.endTime || ''}
+🛑 Desvio IAMO: ${formData.iamoDeviation ? 'SIM (' + (formData.iamoDescription || '') + ')' : 'NÃO'}
+
+♻️ Descrição da OM: ${formData.omDescription || ''}
+
+📈 Atividades executada: ${formData.activityExecuted || ''}
+
+🎯 OM finalizada: ${formData.isFinished ? 'SIM' : 'NÃO'}
+🔔 Pendências: ${formData.hasPendencies ? 'SIM (' + (formData.pendencyDescription || '') + ')' : 'NÃO'}
+📈 Equipe turno: ${formData.teamShift || ''}
+🔖 Centro de Trabalho: ${formData.workCenter || ''}
+👥 Técnicos: ${formData.technicians || ''}`;
+
+    sendToWhatsApp(message);
+  };
+
   const generatePDF = () => {
     const doc = new jsPDF();
     const margin = 15;
-    const pageWidth = 210;
-    const contentWidth = pageWidth - (margin * 2);
     let y = 15;
 
-    // --- Cores Profissionais ---
-    const COLORS = {
-      NAVY: [30, 41, 59], // Slate 800 / Navy
-      PRIMARY: [37, 99, 235], // Blue 600
-      GRAY_TEXT: [100, 116, 139], // Slate 500
-      BG_LIGHT: [248, 250, 252], // Slate 50
-      BORDER: [226, 232, 240], // Slate 200
-      DANGER: [185, 28, 28], // Red 700
-      SUCCESS: [22, 163, 74], // Green 700
-      WARNING: [180, 83, 9] // Amber 700
-    };
-
-    const addFooter = (pageNum: number) => {
+    const addFooter = () => {
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(7);
+      doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
-      doc.text("Relatório Técnico Gerado via ReportMaster - S11D Automação de Mina", margin, 287);
-      doc.text(`Doc ID: ${formData.id?.slice(0, 8)} | Pág: ${pageNum}`, pageWidth - margin, 287, { align: 'right' });
+      const footerText = "relatorio gerado no app reportmast criado por rafael";
+      doc.text(footerText, 105, 290, { align: 'center' });
     };
 
-    const addEmoji = (emoji: string, currentX: number, currentY: number, size: number = 4) => {
-      const dataUrl = renderEmojiToDataUrl(emoji);
-      if (dataUrl) {
-        doc.addImage(dataUrl, 'PNG', currentX, currentY - size + 1, size, size);
-        return true;
-      }
-      return false;
-    };
-
-    // --- CABEÇALHO ---
-    doc.setFillColor(COLORS.NAVY[0], COLORS.NAVY[1], COLORS.NAVY[2]);
-    doc.rect(0, 0, pageWidth, 42, 'F');
+    doc.setFillColor(37, 99, 235);
+    doc.rect(0, 0, 210, 40, 'F');
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(8);
-    doc.text("SISTEMA DE GESTÃO TÉCNICA", margin, 15);
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("RELATÓRIO TÉCNICO DE EXECUÇÃO", margin, 26);
-    doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    doc.text(`Automação S11D - Serra Sul | Data Emissão: ${new Date().toLocaleDateString('pt-BR')}`, margin, 34);
-
-    // Badge Superior: Número da OM
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(pageWidth - margin - 55, 12, 55, 10, 1, 1, 'F');
-    doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(COLORS.NAVY[0], COLORS.NAVY[1], COLORS.NAVY[2]);
-    doc.text(`ORDEM: ${formData.omNumber || 'N/A'}`, pageWidth - margin - 27.5, 18.5, { align: 'center' });
+    doc.text("SISTEMA DE RELATORIOS AUTOMACAO", margin, 15);
+    doc.setFontSize(18);
+    doc.text("RELATORIO DE EXECUCAO", margin, 26);
+    doc.setFontSize(10);
+    doc.text("MINA SERRA SUL - S11D", margin, 34);
+    
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(140, 12, 55, 18, 2, 2, 'F');
+    doc.setTextColor(37, 99, 235);
+    doc.setFontSize(8);
+    doc.text("NUMERO DA OM", 145, 18);
+    doc.setFontSize(14);
+    doc.text(stripSpecialChars(formData.omNumber || "8000XXXX"), 145, 26);
 
-    y = 52;
+    doc.setTextColor(30, 41, 59); // slate-800
+    y = 55;
 
-    const drawSectionHeader = (emoji: string, title: string, color: number[]) => {
-      addEmoji(emoji, margin, y, 6);
-      doc.setFontSize(10);
-      doc.setTextColor(color[0], color[1], color[2]);
+    const addSectionHeader = (title: string) => {
+      doc.setFillColor(241, 245, 249);
+      doc.rect(margin, y - 5, 180, 8, 'F');
       doc.setFont("helvetica", "bold");
-      doc.text(title.toUpperCase(), margin + 8, y);
-      y += 3;
-      doc.setDrawColor(color[0], color[1], color[2]);
-      doc.setLineWidth(0.3);
-      doc.line(margin, y, pageWidth - margin, y);
-      y += 8;
-    };
-
-    // --- SEÇÃO 1: IDENTIFICAÇÃO ---
-    drawSectionHeader("📍", "Identificação e Ativos", COLORS.NAVY);
-
-    const drawGridItem = (label: string, value: string, xPos: number, w: number) => {
-      doc.setFillColor(COLORS.BG_LIGHT[0], COLORS.BG_LIGHT[1], COLORS.BG_LIGHT[2]);
-      doc.rect(xPos, y - 4, w, 15, 'F');
-      doc.setDrawColor(COLORS.BORDER[0], COLORS.BORDER[1], COLORS.BORDER[2]);
-      doc.setLineWidth(0.1);
-      doc.rect(xPos, y - 4, w, 15, 'D');
-      
-      doc.setFontSize(7);
-      doc.setTextColor(COLORS.GRAY_TEXT[0], COLORS.GRAY_TEXT[1], COLORS.GRAY_TEXT[2]);
-      doc.setFont("helvetica", "bold");
-      doc.text(label.toUpperCase(), xPos + 2, y);
-      
       doc.setFontSize(9);
       doc.setTextColor(30, 41, 59);
-      doc.setFont("helvetica", "normal");
-      doc.text(stripSpecialChars(value), xPos + 2, y + 7, { maxWidth: w - 4 });
+      doc.text(title.toUpperCase(), margin + 3, y + 1);
+      y += 12;
     };
 
-    drawGridItem("Data Atividade", new Date(formData.date!).toLocaleDateString('pt-BR'), margin, 40);
-    drawGridItem("Equipamento", formData.equipment!, margin + 45, 60);
-    drawGridItem("Localização", formData.local!, margin + 110, 70);
-    y += 18;
-    drawGridItem("Intervalo", `${formData.startTime} às ${formData.endTime}`, margin, 40);
-    drawGridItem("Natureza da OM", formData.activityType!, margin + 45, 60);
-    drawGridItem("Equipe / Turno", `EQUIPE TURNO ${formData.teamShift}`, margin + 110, 70);
-    y += 20;
+    const addDataRow = (label: string, value: string | boolean, xOffset = 0) => {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7);
+      doc.setTextColor(100, 116, 139);
+      doc.text(stripSpecialChars(label).toUpperCase(), margin + xOffset, y);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(30, 41, 59);
+      doc.text(typeof value === 'boolean' ? (value ? "SIM" : "NAO") : stripSpecialChars(value || "-"), margin + xOffset, y + 5);
+      return y + 12;
+    };
 
-    // Badge IAMO Profissional
+    addSectionHeader("DADOS DE IDENTIFICACAO");
+    addDataRow("Data de Execucao", new Date(formData.date!).toLocaleDateString('pt-BR'));
+    addDataRow("Equipamento", formData.equipment!, 60);
+    addDataRow("Local/Frente", formData.local!, 120);
+    y += 15;
+    
+    addDataRow("Tipo de Atividade", formData.activityType!);
+    addDataRow("Periodo", `${formData.startTime} ate ${formData.endTime}`, 60);
+    addDataRow("Turno da Equipe", `TURNO ${formData.teamShift}`, 120);
+    y += 15;
+
     if (formData.iamoDeviation) {
-      doc.setDrawColor(COLORS.DANGER[0], COLORS.DANGER[1], COLORS.DANGER[2]);
-      doc.setLineWidth(1);
-      doc.line(margin, y - 2, margin, y + 16);
-      doc.setFillColor(254, 242, 242);
-      doc.rect(margin + 0.5, y - 2, contentWidth - 0.5, 18, 'F');
-      
-      addEmoji("🛑", margin + 4, y + 4, 5);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(COLORS.DANGER[0], COLORS.DANGER[1], COLORS.DANGER[2]);
-      doc.setFontSize(9);
-      doc.text("REGISTRO DE DESVIO IAMO:", margin + 11, y + 4);
-      
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(COLORS.NAVY[0], COLORS.NAVY[1], COLORS.NAVY[2]);
-      doc.setFontSize(8.5);
-      const iamoLines = doc.splitTextToSize(stripSpecialChars(formData.iamoDescription!), contentWidth - 16);
-      doc.text(iamoLines, margin + 4, y + 10);
-      y += 25;
+      addDataRow("Ocorrencia IAMO", "SIM");
+      addDataRow("Justificativa IAMO", formData.iamoDescription || "-", 60);
+      y += 15;
     }
 
-    // --- SEÇÃO 2: EXECUÇÃO ---
-    drawSectionHeader("📝", "Detalhamento de Execução", COLORS.NAVY);
+    addSectionHeader("DETALHAMENTO TECNICO");
+    doc.setFontSize(7);
+    doc.setTextColor(100, 116, 139);
+    doc.text("DESCRICAO DA OM", margin, y);
+    y += 4;
+    doc.setTextColor(30, 41, 59);
+    doc.setFontSize(10);
+    const descLines = doc.splitTextToSize(stripSpecialChars(formData.omDescription!), 180);
+    doc.text(descLines, margin, y);
+    y += (descLines.length * 5) + 6;
 
-    const addTechnicalText = (label: string, content: string) => {
-      doc.setFontSize(8);
-      doc.setTextColor(COLORS.GRAY_TEXT[0], COLORS.GRAY_TEXT[1], COLORS.GRAY_TEXT[2]);
-      doc.setFont("helvetica", "bold");
-      doc.text(label.toUpperCase(), margin, y);
-      y += 4;
-      doc.setFontSize(9.5);
-      doc.setTextColor(COLORS.NAVY[0], COLORS.NAVY[1], COLORS.NAVY[2]);
-      doc.setFont("helvetica", "normal");
-      const lines = doc.splitTextToSize(stripSpecialChars(content), contentWidth);
-      doc.text(lines, margin, y, { lineHeightFactor: 1.2 });
-      y += (lines.length * 5) + 6;
-    };
+    doc.setFontSize(7);
+    doc.setTextColor(100, 116, 139);
+    doc.text("ATIVIDADES EFETIVAMENTE EXECUTADAS", margin, y);
+    y += 4;
+    doc.setTextColor(30, 41, 59);
+    doc.setFontSize(10);
+    const execLines = doc.splitTextToSize(stripSpecialChars(formData.activityExecuted!), 180);
+    doc.text(execLines, margin, y);
+    y += (execLines.length * 5) + 10;
 
-    addTechnicalText("Escopo Original da Ordem", formData.omDescription!);
+    addSectionHeader("STATUS FINAL E EQUIPE");
+    addDataRow("Status OM", formData.isFinished ? "CONCLUIDA" : "EM ANDAMENTO");
+    addDataRow("Pendencias", formData.hasPendencies ? "SIM" : "NAO", 60);
+    if (formData.hasPendencies) addDataRow("Descritivo Pendencia", formData.pendencyDescription!, 120);
+    y += 15;
+    addDataRow("Centro de Trabalho", formData.workCenter!);
+    addDataRow("Equipe Técnica Envolvida", formData.technicians!, 60);
     
-    if (y > 220) { addFooter(1); doc.addPage(); y = 25; }
-    
-    addTechnicalText("Atividades Efetivamente Realizadas", formData.activityExecuted!);
+    addFooter();
 
-    // --- SEÇÃO 3: RESPONSÁVEIS ---
-    drawSectionHeader("👥", "Controle de Equipe e Pendências", COLORS.NAVY);
-
-    drawGridItem("Centro de Trabalho", formData.workCenter!, margin, 45);
-    drawGridItem("Inspetores / Técnicos", formData.technicians!, margin + 50, 130);
-    y += 20;
-
-    if (formData.hasPendencies) {
-      doc.setDrawColor(COLORS.WARNING[0], COLORS.WARNING[1], COLORS.WARNING[2]);
-      doc.setLineWidth(1);
-      doc.line(margin, y - 2, margin, y + 14);
-      doc.setFillColor(COLORS.BG_LIGHT[0], COLORS.BG_LIGHT[1], COLORS.BG_LIGHT[2]);
-      doc.rect(margin + 0.5, y - 2, contentWidth - 0.5, 16, 'F');
-      
-      addEmoji("⚠️", margin + 4, y + 3, 5);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(COLORS.WARNING[0], COLORS.WARNING[1], COLORS.WARNING[2]);
-      doc.setFontSize(9);
-      doc.text("NOTIFICAÇÃO DE PENDÊNCIA:", margin + 11, y + 3);
-      
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(COLORS.NAVY[0], COLORS.NAVY[1], COLORS.NAVY[2]);
-      doc.setFontSize(8.5);
-      doc.text(stripSpecialChars(formData.pendencyDescription!), margin + 4, y + 9);
-      y += 20;
-    }
-
-    // Status de Conclusão Final (Fixado em CONCLUÍDA)
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(COLORS.SUCCESS[0], COLORS.SUCCESS[1], COLORS.SUCCESS[2]);
-    addEmoji("✅", margin, y + 1, 5);
-    doc.text(`STATUS DA ORDEM: CONCLUÍDA`, margin + 7, y + 1);
-
-    addFooter(1);
-
-    // --- PÁGINA DE ANEXOS ---
     if (formData.photos?.length) {
       doc.addPage();
       y = 20;
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(COLORS.NAVY[0], COLORS.NAVY[1], COLORS.NAVY[2]);
-      doc.text("ANEXO: EVIDÊNCIAS FOTOGRÁFICAS", margin, y);
-      y += 4;
-      doc.setDrawColor(COLORS.NAVY[0], COLORS.NAVY[1], COLORS.NAVY[2]);
-      doc.line(margin, y, margin + 80, y);
-      y += 12;
-
-      const photoWidth = 85;
-      const photoHeight = 65;
-      const spacing = 10;
+      doc.setTextColor(37, 99, 235);
+      doc.text("EVIDENCIAS FOTOGRAFICAS", margin, y);
+      y += 10;
 
       formData.photos.forEach((p, i) => {
-        const col = i % 2;
-        const row = Math.floor(i / 2) % 3;
-        if (i > 0 && i % 6 === 0) {
-          addFooter(Math.floor(i/6) + 1);
-          doc.addPage();
-          y = 30;
+        if (y > 230) { 
+          addFooter();
+          doc.addPage(); 
+          y = 20; 
         }
-        const xPos = margin + (col * (photoWidth + spacing));
-        const currentY = (row === 0 && i % 6 === 0) ? y : (y + (row * (photoHeight + 32)));
-        
-        // Frame Foto
-        doc.setDrawColor(COLORS.BORDER[0], COLORS.BORDER[1], COLORS.BORDER[2]);
-        doc.setLineWidth(0.1);
-        doc.rect(xPos, currentY, photoWidth, photoHeight, 'D');
-
-        try {
-          doc.addImage(p.dataUrl, 'JPEG', xPos + 1, currentY + 1, photoWidth - 2, photoHeight - 2);
-        } catch (e) {}
-
-        // Legenda Técnica
-        doc.setFontSize(7.5);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(COLORS.GRAY_TEXT[0], COLORS.GRAY_TEXT[1], COLORS.GRAY_TEXT[2]);
-        doc.text(`EVIDÊNCIA 0${i + 1}`, xPos, currentY + photoHeight + 5);
-        
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(COLORS.NAVY[0], COLORS.NAVY[1], COLORS.NAVY[2]);
-        const capLines = doc.splitTextToSize(stripSpecialChars(p.caption || "Registro técnico sem observação adicional."), photoWidth);
-        doc.text(capLines, xPos, currentY + photoHeight + 10);
+        const col = i % 2;
+        const xPos = margin + (col * 92);
+        doc.setDrawColor(226, 232, 240);
+        doc.rect(xPos, y, 88, 72);
+        try { doc.addImage(p.dataUrl, 'JPEG', xPos + 1, y + 1, 86, 60, undefined, 'FAST'); } catch (e) {}
+        if (p.caption) {
+          doc.setFillColor(248, 250, 252);
+          doc.rect(xPos + 1, y + 62, 86, 9, 'F');
+          doc.setFontSize(7);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(71, 85, 105);
+          const captionLines = doc.splitTextToSize(stripSpecialChars(p.caption), 82);
+          doc.text(captionLines, xPos + 3, y + 66.5);
+        }
+        if (col === 1 || i === formData.photos!.length - 1) { y += 78; }
       });
-      addFooter(Math.ceil(formData.photos.length / 6) + 1);
+      addFooter();
     }
-
-    // Sanitiza a descrição para remover caracteres que podem quebrar o nome do arquivo
-    const sanitizedDesc = (formData.omDescription || 'ATIVIDADE')
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]/gi, '_')
-      .toUpperCase()
-      .slice(0, 40);
-    
-    const omNum = formData.omNumber || 'SEM_NUMERO';
-    doc.save(`OM_${omNum}_${sanitizedDesc}.pdf`);
-  };
-
-  const shareViaWhatsApp = () => {
-    const message = `🛠️ *RELATÓRIO DE EXECUÇÃO*
-🏢 *AUTOMAÇÃO MINA SERRA SUL*
-
-🗓️ *Data:* ${formData.date ? new Date(formData.date).toLocaleDateString('pt-BR') : ''}
-🚜 *Equipamento:* ${formData.equipment || ''}
-📌 *Local:* ${formData.local || ''}
-📂 *N° OM:* ${formData.omNumber || ''}
-
-🛠️ *Tipo:* ${formData.activityType?.toUpperCase() || ''}
-⏰ *Horário:* ${formData.startTime} - ${formData.endTime}
-🛑 *Desvio IAMO:* ${formData.iamoDeviation ? 'SIM (' + (formData.iamoDescription || '') + ')' : 'NÃO'}
-
-♻️ *Descrição da OM:* ${formData.omDescription || ''}
-
-⚙️ *Atividades Realizadas:* 
-${formData.activityExecuted || ''}
-
-🎯 *OM Finalizada:* CONCLUÍDA
-🔔 *Pendências:* ${formData.hasPendencies ? 'SIM (' + (formData.pendencyDescription || '') + ')' : 'NÃO'}
-👥 *Técnicos:* ${formData.technicians || ''}`;
-    sendToWhatsApp(message);
+    doc.save(`RELATORIO_OM_${formData.omNumber || 'PENDENTE'}.pdf`);
   };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-dark-bg pb-32 text-slate-800 dark:text-white transition-colors">
-      <UpdateManager />
       <nav className="sticky top-0 z-30 bg-white dark:bg-dark-card border-b dark:border-dark-border px-4 py-3 flex items-center gap-3 shadow-md">
         <button onClick={() => navigate('/')} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-dark-bg transition-colors"><ChevronLeft className="dark:text-white w-6 h-6" /></button>
         <div>
@@ -1236,7 +1169,7 @@ ${formData.activityExecuted || ''}
           <div className="bg-white dark:bg-dark-card border-2 border-blue-500/20 p-4 rounded-3xl flex items-center gap-4 shadow-sm">
              <div className="bg-blue-500/10 p-3 rounded-2xl"><ClipboardList className="w-6 h-6 text-blue-600" /></div>
              <div className="flex flex-col">
-                <span className="font-black text-xs uppercase text-blue-700 dark:text-blue-400">Novo Modelo</span>
+                <span className="font-black text-xs uppercase text-blue-700 dark:text-blue-400">Novo Modelo: {formData.category?.toUpperCase()}</span>
                 <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Preencha o escopo da atividade base.</p>
              </div>
           </div>
@@ -1256,6 +1189,7 @@ ${formData.activityExecuted || ''}
 
         <div className="bg-white dark:bg-dark-card rounded-[2rem] border border-slate-200 dark:border-dark-border shadow-md overflow-hidden p-5 space-y-6">
           
+          {/* 1. Identificação */}
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-2">
               <div className="h-4 w-1 bg-blue-600 rounded-full" />
@@ -1270,6 +1204,7 @@ ${formData.activityExecuted || ''}
             <CompactInput label="📌 Local" value={formData.local!} onChange={v => setFormData(p => ({...p, local: v}))} required placeholder="Qual o local da atividade?" disabled={isNew} icon={<MapPin className="w-4 h-4" />} />
           </div>
 
+          {/* 2. Ordem de Manutenção */}
           <div className="flex flex-col gap-4 pt-4 border-t dark:border-dark-border">
             <div className="flex items-center gap-2">
               <div className="h-4 w-1 bg-indigo-600 rounded-full" />
@@ -1278,6 +1213,7 @@ ${formData.activityExecuted || ''}
 
             <div className="grid grid-cols-2 gap-3">
               <CompactInput label="📂 N° OM" value={formData.omNumber!} onChange={v => setFormData(p => ({...p, omNumber: v}))} required placeholder="Número OM" disabled={isNew} icon={<Hash className="w-4 h-4" />} />
+
               <div className={`flex flex-col gap-1 ${isNew ? 'opacity-60' : ''}`}>
                 <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🛠️ Tipo</label>
                 <select disabled={isNew} value={formData.activityType} onChange={e => setFormData(p => ({...p, activityType: e.target.value as any}))} className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-dark-border bg-white dark:bg-dark-card dark:text-white text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-blue-100">
@@ -1288,15 +1224,18 @@ ${formData.activityExecuted || ''}
             </div>
           </div>
 
+          {/* 3. Horários e IAMO */}
           <div className="flex flex-col gap-4 pt-4 border-t dark:border-dark-border">
             <div className="flex items-center gap-2">
               <div className="h-4 w-1 bg-amber-600 rounded-full" />
               <h3 className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">⏰ Horários / IAMO</h3>
             </div>
+
             <div className="grid grid-cols-2 gap-3">
               <CompactInput label="⏰ Início" type="time" value={formData.startTime!} onChange={v => setFormData(p => ({...p, startTime: v}))} required disabled={isNew} />
               <CompactInput label="⏰ Término" type="time" value={formData.endTime!} onChange={v => setFormData(p => ({...p, endTime: v}))} required disabled={isNew} />
             </div>
+
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🛑 Desvio IAMO?</label>
               <button disabled={isNew} onClick={() => setFormData(p => ({...p, iamoDeviation: !p.iamoDeviation}))} className={`w-full py-3 rounded-xl text-[11px] font-black transition-all border-2 flex items-center justify-center gap-2 ${formData.iamoDeviation ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-500 text-rose-600' : 'bg-slate-50 dark:bg-dark-bg border-slate-200 dark:border-dark-border text-slate-400'}`}>
@@ -1308,34 +1247,31 @@ ${formData.activityExecuted || ''}
             )}
           </div>
 
+          {/* 4. Escopo e Execução */}
           <div className="flex flex-col gap-4 pt-4 border-t dark:border-dark-border">
             <div className="flex items-center gap-2">
               <div className="h-4 w-1 bg-emerald-600 rounded-full" />
               <h3 className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">📝 Detalhamento</h3>
             </div>
+
             <CompactTextArea label="♻️ Descrição da OM" value={formData.omDescription!} onChange={v => setFormData(p => ({...p, omDescription: v}))} required placeholder="Escopo planejado..." rows={3} />
             
-            <CompactTextArea 
-              label="📈 Atividades Realizadas" 
-              value={formData.activityExecuted!} 
-              onChange={v => setFormData(p => ({...p, activityExecuted: v}))} 
-              required 
-              rows={8} 
-              placeholder="Descreva as atividades executadas..." 
-            />
+            <CompactTextArea label="📈 Atividades Realizadas" value={formData.activityExecuted!} onChange={v => setFormData(p => ({...p, activityExecuted: v}))} required rows={6} placeholder="O que foi executado na prática?" />
           </div>
 
+          {/* 5. Fechamento e Equipe */}
           <div className={`flex flex-col gap-4 pt-4 border-t dark:border-dark-border ${isNew ? 'opacity-40 pointer-events-none' : ''}`}>
             <div className="flex items-center gap-2">
               <div className="h-4 w-1 bg-rose-600 rounded-full" />
               <h3 className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">🏁 Finalização</h3>
             </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🎯 Status</label>
-                <div className="w-full py-3 rounded-xl text-[11px] font-black text-center bg-emerald-50 dark:bg-emerald-900/10 border-2 border-emerald-500 text-emerald-600">
-                  CONCLUÍDA
-                </div>
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🎯 Concluída?</label>
+                <button onClick={() => setFormData(p => ({...p, isFinished: !p.isFinished}))} className={`w-full py-3 rounded-xl text-[11px] font-black transition-all border-2 ${formData.isFinished ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-500 text-emerald-600' : 'bg-amber-50 dark:bg-amber-900/10 border-amber-500 text-amber-600'}`}>
+                  {formData.isFinished ? 'CONCLUÍDA' : 'EM ANDAMENTO'}
+                </button>
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🔔 Pendências?</label>
@@ -1347,6 +1283,7 @@ ${formData.activityExecuted || ''}
             {formData.hasPendencies && (
               <CompactTextArea label="📝 Relatório de Pendência" value={formData.pendencyDescription!} onChange={v => setFormData(p => ({...p, pendencyDescription: v}))} required placeholder="Descreva as pendências..." rows={2} />
             )}
+
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">📈 Turno</label>
@@ -1361,6 +1298,7 @@ ${formData.activityExecuted || ''}
                 </select>
               </div>
             </div>
+
             <div className="flex flex-col gap-3">
               <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">👥 Equipe Envolvida</label>
               <div className="flex flex-wrap gap-2">
@@ -1374,6 +1312,7 @@ ${formData.activityExecuted || ''}
                   );
                 })}
               </div>
+
               <div className="flex flex-wrap gap-2">
                 {formData.technicians?.split(', ').filter(name => name && !TECHNICIANS_BY_SHIFT[formData.teamShift! || 'A'].includes(name)).map(name => (
                   <button key={name} onClick={() => toggleTechnician(name)} className="px-3 py-2 rounded-xl text-xs font-bold border-2 transition-all flex items-center gap-2 bg-indigo-600 border-indigo-600 text-white shadow-md">
@@ -1382,17 +1321,29 @@ ${formData.activityExecuted || ''}
                   </button>
                 ))}
               </div>
+
               <div className="flex gap-2 items-end mt-1">
                 <div className="flex-1">
-                  <CompactInput label="👤 Adicionar Outro Técnico" value={customTechnician} onChange={setCustomTechnician} placeholder="Nome completo..." icon={<UserPlus className="w-4 h-4" />} />
+                  <CompactInput 
+                    label="👤 Adicionar Outro Técnico" 
+                    value={customTechnician} 
+                    onChange={setCustomTechnician} 
+                    placeholder="Nome completo..."
+                    icon={<UserPlus className="w-4 h-4" />}
+                  />
                 </div>
-                <button onClick={addCustomTechnician} disabled={!customTechnician.trim()} className="bg-slate-100 dark:bg-dark-bg p-2.5 rounded-xl text-blue-600 disabled:opacity-40 border border-slate-200 dark:border-dark-border">
+                <button 
+                  onClick={addCustomTechnician} 
+                  disabled={!customTechnician.trim()}
+                  className="bg-slate-100 dark:bg-dark-bg p-2.5 rounded-xl text-blue-600 disabled:opacity-40 active:scale-90 transition-all border border-slate-200 dark:border-dark-border"
+                >
                   <Plus className="w-6 h-6" />
                 </button>
               </div>
             </div>
           </div>
 
+          {/* 6. Evidências (Fotos) */}
           <div className={`flex flex-col gap-4 pt-4 border-t dark:border-dark-border ${isNew ? 'opacity-40 pointer-events-none' : ''}`}>
              <div className="flex items-center gap-2">
                <div className="h-4 w-1 bg-purple-600 rounded-full" />

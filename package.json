@@ -1,16 +1,12 @@
-
 {
   "name": "reportmaster-om",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.0.0",
   "type": "module",
-  "main": "main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "electron:dev": "vite & electron .",
-    "electron:build": "vite build && electron-builder"
+    "preview": "vite preview"
   },
   "dependencies": {
     "react-dom": "^19.2.3",
@@ -22,24 +18,7 @@
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
-    "electron": "^31.0.0",
-    "electron-builder": "^24.13.3",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
-  },
-  "build": {
-    "appId": "com.reportmaster.om",
-    "productName": "ReportMaster OM",
-    "directories": {
-      "output": "dist-electron"
-    },
-    "files": [
-      "dist/**/*",
-      "main.cjs"
-    ],
-    "win": {
-      "target": "portable",
-      "icon": "https://cdn-icons-png.flaticon.com/512/3209/3209265.png"
-    }
   }
 }

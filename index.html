@@ -31,7 +31,7 @@
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f8fafc;
-            color: #1e293b;
+            color: #1e293b; /* slate-800: um preto mais fraco/suave */
             -webkit-tap-highlight-color: transparent;
             transition: background-color 0.3s ease;
         }
@@ -77,16 +77,5 @@
 <body>
     <div id="root"></div>
 <script type="module" src="/index.tsx"></script>
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').then(registration => {
-        console.log('SW registrado com sucesso:', registration.scope);
-      }, err => {
-        console.log('Falha no registro do SW:', err);
-      });
-    });
-  }
-</script>
 </body>
 </html>
