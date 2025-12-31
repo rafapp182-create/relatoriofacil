@@ -652,7 +652,8 @@ const ImageEditor: React.FC<{
 
   const handleSave = () => {
     if (canvasRef.current) {
-      onSave(canvasRef.current.toDataURL('image/jpeg', 0.8));
+      // Qualidade aumentada para preservar detalhes de fotos com flash
+      onSave(canvasRef.current.toDataURL('image/jpeg', 0.95));
     }
   };
 
@@ -1012,6 +1013,14 @@ const ReportFormPage = () => {
     setCustomTechnician('');
   };
 
+  const addPhoto = (dataUrl: string) => {
+    const newPhoto: ReportPhoto = { id: crypto.randomUUID(), dataUrl, timestamp: Date.now() };
+    setFormData(prev => ({ ...prev, photos: [...(prev.photos || []), newPhoto] }));
+    try {
+      storage.saveToPhotoBank(newPhoto);
+    } catch(e) {}
+  };
+
   const updatePhotoCaption = (photoId: string, caption: string) => {
     setFormData(prev => ({
       ...prev,
@@ -1243,7 +1252,7 @@ AUTOMAÇÃO MINA SERRA SUL
     doc.text(stripSpecialChars(formData.technicians || "-"), margin + 4, y);
     y += 10;
 
-    // Seção de Fotos (Sempre em nova página para organização se houver muitas)
+    // Seção de Fotos (Qualidade melhorada para fotos com flash)
     if (formData.photos?.length) {
       doc.addPage(); 
       y = 20;
@@ -1258,7 +1267,10 @@ AUTOMAÇÃO MINA SERRA SUL
         doc.setDrawColor(BORDER_COLOR[0], BORDER_COLOR[1], BORDER_COLOR[2]);
         doc.setLineWidth(0.1);
         doc.rect(xPos, y, imgWidth, imgHeight + 10);
-        try { doc.addImage(p.dataUrl, 'JPEG', xPos + 0.5, y + 0.5, imgWidth - 1, imgHeight - 1, undefined, 'FAST'); } catch (e) {}
+        try { 
+          // Alterado de 'FAST' para 'NONE' para garantir fidelidade de cores e brilho do flash
+          doc.addImage(p.dataUrl, 'JPEG', xPos + 0.5, y + 0.5, imgWidth - 1, imgHeight - 1, undefined, 'NONE'); 
+        } catch (e) {}
         if (p.caption) {
           doc.setFillColor(241, 245, 249);
           doc.rect(xPos, y + imgHeight, imgWidth, 10, 'F');
@@ -1484,7 +1496,7 @@ AUTOMAÇÃO MINA SERRA SUL
                     if (!e.target.files) return;
                     Array.from(e.target.files).forEach((file: File) => {
                       const reader = new FileReader();
-                      reader.onload = (ev) => { if (typeof ev.target?.result === 'string') setFormData(prev => ({ ...prev, photos: [...(prev.photos || []), { id: crypto.randomUUID(), dataUrl: ev.target!.result as string, timestamp: Date.now() }] })); };
+                      reader.onload = (ev) => { if (typeof ev.target?.result === 'string') addPhoto(ev.target!.result as string); };
                       reader.readAsDataURL(file);
                     });
                   }} />
@@ -1496,7 +1508,7 @@ AUTOMAÇÃO MINA SERRA SUL
                     if (!e.target.files) return;
                     Array.from(e.target.files).forEach((file: File) => {
                       const reader = new FileReader();
-                      reader.onload = (ev) => { if (typeof ev.target?.result === 'string') setFormData(prev => ({ ...prev, photos: [...(prev.photos || []), { id: crypto.randomUUID(), dataUrl: ev.target!.result as string, timestamp: Date.now() }] })); };
+                      reader.onload = (ev) => { if (typeof ev.target?.result === 'string') addPhoto(ev.target!.result as string); };
                       reader.readAsDataURL(file);
                     });
                   }} />

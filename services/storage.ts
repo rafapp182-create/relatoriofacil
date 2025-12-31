@@ -1,11 +1,12 @@
 
-import { Report, UserSession, User } from '../types';
+import { Report, UserSession, User, ReportPhoto } from '../types';
 
 const STORAGE_KEY = 'report_master_om_data';
 const SHIFT_TEMPLATES_KEY = 'report_master_shift_templates';
 const THEME_KEY = 'report_master_theme';
 const AUTH_KEY = 'report_master_auth';
 const USERS_KEY = 'report_master_registered_users';
+const PHOTO_BANK_KEY = 'report_master_photo_bank';
 
 export const storage = {
   getReports: (): Report[] => {
@@ -37,7 +38,7 @@ export const storage = {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
   },
 
-  // Seed default templates if they don't exist
+  // Seed default templates
   seedDefaultTemplates: (): void => {
     const reports = storage.getReports();
     
@@ -197,8 +198,8 @@ export const storage = {
         type: 'template',
         category: 'fixos',
         omNumber: '',
-        equipment: '',
-        local: '',
+        equipment: 'MP INSPEÇÃO DE REDE DE REDUNDÂNCIA',
+        local: 'MINA',
         omDescription: 'MP INSPEÇÃO DE REDE DE REDUNDÂNCIA',
         activityType: 'preventiva',
         startTime: '08:00',
@@ -210,7 +211,7 @@ export const storage = {
         isFinished: true,
         hasPendencies: false,
         pendencyDescription: '',
-        teamShift: 'B',
+        teamShift: 'A',
         workCenter: 'SC108HH',
         technicians: '',
         photos: [],
@@ -222,8 +223,8 @@ export const storage = {
         type: 'template',
         category: 'fixos',
         omNumber: '',
-        equipment: '',
-        local: '',
+        equipment: 'MP RADIO RAJAT',
+        local: 'MINA',
         omDescription: 'MP RADIO RAJAT',
         activityType: 'preventiva',
         startTime: '08:00',
@@ -247,8 +248,8 @@ export const storage = {
         type: 'template',
         category: 'fixos',
         omNumber: '',
-        equipment: '',
-        local: '',
+        equipment: 'MP LIMPEZA DE ATIVOS',
+        local: 'SISTEMA 1/2/3/4',
         omDescription: 'MP LIMPEZA DE ATIVOS',
         activityType: 'preventiva',
         startTime: '08:00',
@@ -272,8 +273,8 @@ export const storage = {
         type: 'template',
         category: 'fixos',
         omNumber: '',
-        equipment: '',
-        local: '',
+        equipment: 'FONTE RAJANT',
+        local: 'MINA',
         omDescription: 'FIXAR FONTE RAJANT',
         activityType: 'preventiva',
         startTime: '08:00',
@@ -287,7 +288,7 @@ export const storage = {
         pendencyDescription: '',
         teamShift: 'B',
         workCenter: 'SC108HH',
-        technicians: 'Luiz Gustavo / Rafael',
+        technicians: '',
         photos: [],
         createdAt: Date.now(),
         updatedAt: Date.now()
@@ -297,8 +298,8 @@ export const storage = {
         type: 'template',
         category: 'fixos',
         omNumber: '',
-        equipment: '',
-        local: '',
+        equipment: 'SWITCH CISCO',
+        local: 'MINA',
         omDescription: 'REALIZAR FIXAÇÃO DE TAG DEFINITIVO NO SW',
         activityType: 'preventiva',
         startTime: '08:00',
@@ -312,7 +313,7 @@ export const storage = {
         pendencyDescription: '',
         teamShift: 'B',
         workCenter: 'SC108HH',
-        technicians: 'Luiz Gustavo / Rafael',
+        technicians: '',
         photos: [],
         createdAt: Date.now(),
         updatedAt: Date.now()
@@ -322,8 +323,8 @@ export const storage = {
         type: 'template',
         category: 'fixos',
         omNumber: '',
-        equipment: '',
-        local: '',
+        equipment: 'TRAVA TRILHO DIN',
+        local: 'MINA',
         omDescription: 'INSTALAR TRAVA TRILHO DIN',
         activityType: 'preventiva',
         startTime: '08:00',
@@ -347,8 +348,8 @@ export const storage = {
         type: 'template',
         category: 'fixos',
         omNumber: '',
-        equipment: '',
-        local: '',
+        equipment: 'SWITCH CISCO',
+        local: 'MINA',
         omDescription: 'PREVEN. LOGICA SWITCH SW0663',
         activityType: 'preventiva',
         startTime: '08:00',
@@ -372,8 +373,8 @@ export const storage = {
         type: 'template',
         category: 'fixos',
         omNumber: '',
-        equipment: '',
-        local: '',
+        equipment: 'PAINEL ELÉTRICO',
+        local: 'MINA',
         omDescription: 'REALIZAR LIMPEZA E ORGANIZAÇÃO DO PAINEL',
         activityType: 'preventiva',
         startTime: '08:00',
@@ -397,8 +398,8 @@ export const storage = {
         type: 'template',
         category: 'fixos',
         omNumber: '',
-        equipment: '',
-        local: '',
+        equipment: 'CÂMERA CFTV',
+        local: 'MINA',
         omDescription: 'MP LOGICA CFTV',
         activityType: 'preventiva',
         startTime: '08:00',
@@ -427,7 +428,26 @@ export const storage = {
     });
   },
 
-  // Auth Management
+  getPhotoBank: (): ReportPhoto[] => {
+    try {
+      const data = localStorage.getItem(PHOTO_BANK_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      return [];
+    }
+  },
+
+  saveToPhotoBank: (photo: ReportPhoto): void => {
+    try {
+      const bank = storage.getPhotoBank();
+      if (bank.some(p => p.dataUrl === photo.dataUrl)) return;
+      bank.unshift(photo);
+      // Limita a 50 fotos para não estourar storage
+      if (bank.length > 50) bank.pop();
+      localStorage.setItem(PHOTO_BANK_KEY, JSON.stringify(bank));
+    } catch (e) {}
+  },
+
   getUsers: (): User[] => {
     try {
       const data = localStorage.getItem(USERS_KEY);
@@ -469,7 +489,6 @@ export const storage = {
     localStorage.removeItem(AUTH_KEY);
   },
 
-  // Shift Start Templates
   getShiftTemplates: (): Record<string, string> | null => {
     try {
       const data = localStorage.getItem(SHIFT_TEMPLATES_KEY);
@@ -483,7 +502,6 @@ export const storage = {
     localStorage.setItem(SHIFT_TEMPLATES_KEY, JSON.stringify(templates));
   },
 
-  // Backup & Restore
   exportBackup: (): void => {
     const reports = storage.getReports();
     const templates = storage.getShiftTemplates();
@@ -506,9 +524,6 @@ export const storage = {
           localStorage.setItem(SHIFT_TEMPLATES_KEY, JSON.stringify(parsed.templates));
         }
         return true;
-      } else if (Array.isArray(parsed)) {
-        localStorage.setItem(STORAGE_KEY, jsonString);
-        return true;
       }
       return false;
     } catch (e) {
@@ -516,7 +531,6 @@ export const storage = {
     }
   },
 
-  // Theme Management
   getTheme: (): 'light' | 'dark' => {
     return (localStorage.getItem(THEME_KEY) as 'light' | 'dark') || 'light';
   },
