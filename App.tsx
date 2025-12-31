@@ -213,7 +213,7 @@ const stripSpecialChars = (text: string) => {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^\x20-\x7E\s]/g, "")
-    .replace(/✅/g, "[OK]")
+    .replace(/✅/g, "  ") // Espaço duplo para o checkmark desenhado
     .replace(/🛑/g, "[!] ")
     .replace(/🗓️/g, "")
     .replace(/🚜/g, "")
@@ -964,6 +964,7 @@ const ReportFormPage = () => {
     }
   };
 
+  // Fixed duplicate definitions by keeping only one set of logic functions
   const toggleTechnician = (name: string) => {
     const currentList = formData.technicians ? formData.technicians.split(', ').filter(n => n) : [];
     let newList: string[] = currentList.includes(name) ? currentList.filter(n => n !== name) : [...currentList, name];
@@ -1047,24 +1048,58 @@ AUTOMAÇÃO MINA SERRA SUL
       doc.text("S11D - Serra Sul - Automação de Mina", margin, 287);
     };
 
+    const drawPDFEmoji = (type: string, x: number, y: number) => {
+      doc.setLineWidth(0.1);
+      if (type === 'date') { // 🗓️
+        doc.setFillColor(37, 99, 235);
+        doc.rect(x, y - 3, 4, 4, 'F');
+        doc.setFillColor(255, 255, 255);
+        doc.rect(x + 1, y - 2, 2, 2, 'F');
+      } else if (type === 'equipment') { // 🚜
+        doc.setFillColor(245, 158, 11);
+        doc.rect(x, y - 3, 4, 3, 'F');
+        doc.setFillColor(30, 41, 59);
+        doc.circle(x + 1, y - 0.5, 0.8, 'F');
+        doc.circle(x + 3, y - 0.5, 0.8, 'F');
+      } else if (type === 'local') { // 📌
+        doc.setFillColor(225, 29, 72);
+        doc.circle(x + 2, y - 2.5, 1.8, 'F');
+        doc.setDrawColor(225, 29, 72);
+        doc.line(x + 2, y - 0.7, x + 2, y + 0.5);
+      } else if (type === 'om') { // 📂
+        doc.setFillColor(79, 70, 229);
+        doc.rect(x, y - 3.5, 4.5, 3.5, 'F');
+        doc.setFillColor(255, 255, 255);
+        doc.rect(x + 0.5, y - 3, 1.5, 0.5, 'F');
+      } else if (type === 'check') { // ✅
+        doc.setFillColor(16, 185, 129);
+        doc.circle(x + 2, y - 2, 1.8, 'F');
+        doc.setDrawColor(255, 255, 255);
+        doc.setLineWidth(0.4);
+        doc.line(x + 1.2, y - 2, x + 1.8, y - 1.2);
+        doc.line(x + 1.8, y - 1.2, x + 2.8, y - 2.8);
+      } else if (type === 'time') { // ⏰
+        doc.setFillColor(245, 158, 11);
+        doc.circle(x + 2, y - 2, 2, 'F');
+        doc.setDrawColor(255, 255, 255);
+        doc.setLineWidth(0.3);
+        doc.line(x + 2, y - 2, x + 2, y - 3.2);
+        doc.line(x + 2, y - 2, x + 3.2, y - 2);
+      }
+    };
+
     const addHeader = () => {
-      // Background Header
       doc.setFillColor(BLUE_PRIMARY[0], BLUE_PRIMARY[1], BLUE_PRIMARY[2]);
       doc.rect(0, 0, pageWidth, 45, 'F');
-
-      // Título
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(22);
       doc.text("RELATÓRIO DE EXECUÇÃO", margin, 25);
-      
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       doc.text("SISTEMA DE GESTÃO DE MANUTENÇÃO - AUTOMAÇÃO MINA", margin, 32);
       doc.setFont("helvetica", "bold");
       doc.text("UNIDADE: S11D SERRA SUL", margin, 37);
-
-      // Badge OM
       doc.setFillColor(255, 255, 255);
       doc.roundedRect(145, 12, 50, 22, 2, 2, 'F');
       doc.setTextColor(BLUE_PRIMARY[0], BLUE_PRIMARY[1], BLUE_PRIMARY[2]);
@@ -1075,61 +1110,55 @@ AUTOMAÇÃO MINA SERRA SUL
       doc.text(stripSpecialChars(formData.omNumber || "8000XXXX"), 149, 28);
     };
 
-    const drawSectionTitle = (title: string, currentY: number) => {
+    const drawSectionTitle = (title: string, currentY: number, emojiType?: string) => {
       doc.setFillColor(BG_SECTION[0], BG_SECTION[1], BG_SECTION[2]);
       doc.rect(margin, currentY, pageWidth - (margin * 2), 10, 'F');
       doc.setDrawColor(BLUE_PRIMARY[0], BLUE_PRIMARY[1], BLUE_PRIMARY[2]);
       doc.setLineWidth(0.8);
       doc.line(margin, currentY, margin, currentY + 10);
-      
       doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(10);
-      doc.text(title.toUpperCase(), margin + 5, currentY + 6.5);
+      const textOffset = emojiType ? 10 : 5;
+      if (emojiType) drawPDFEmoji(emojiType, margin + 3.5, currentY + 7);
+      doc.text(title.toUpperCase(), margin + textOffset, currentY + 6.5);
       return currentY + 16;
     };
 
-    const drawInfoGrid = (data: {label: string, value: string}[], currentY: number) => {
+    const drawInfoGrid = (data: {label: string, value: string, emoji?: string}[], currentY: number) => {
       const colWidth = (pageWidth - (margin * 2)) / 3;
-      doc.setFontSize(7);
-      doc.setTextColor(SLATE_LIGHT[0], SLATE_LIGHT[1], SLATE_LIGHT[2]);
-      doc.setFont("helvetica", "bold");
-      
       data.forEach((item, i) => {
         const col = i % 3;
         const row = Math.floor(i / 3);
         const xPos = margin + (col * colWidth);
         const yPos = currentY + (row * 12);
-        
-        doc.text(stripSpecialChars(item.label).toUpperCase(), xPos, yPos);
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
-        doc.text(stripSpecialChars(item.value || "-"), xPos, yPos + 5);
+        if (item.emoji) drawPDFEmoji(item.emoji, xPos, yPos - 1.5);
         doc.setFontSize(7);
         doc.setTextColor(SLATE_LIGHT[0], SLATE_LIGHT[1], SLATE_LIGHT[2]);
         doc.setFont("helvetica", "bold");
+        doc.text(stripSpecialChars(item.label).toUpperCase(), xPos + (item.emoji ? 6 : 0), yPos);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
+        doc.text(stripSpecialChars(item.value || "-"), xPos + (item.emoji ? 6 : 0), yPos + 5);
       });
-      
       return currentY + (Math.ceil(data.length / 3) * 15);
     };
 
-    // --- Início da Geração ---
     addHeader();
     y = 55;
-
-    y = drawSectionTitle("Dados Gerais da Atividade", y);
+    y = drawSectionTitle("Dados Gerais da Atividade", y, 'om');
     y = drawInfoGrid([
-      { label: "Data de Execução", value: new Date(formData.date!).toLocaleDateString('pt-BR') },
-      { label: "Equipamento", value: formData.equipment! },
-      { label: "Localização", value: formData.local! },
+      { label: "Data de Execução", value: new Date(formData.date!).toLocaleDateString('pt-BR'), emoji: 'date' },
+      { label: "Equipamento", value: formData.equipment!, emoji: 'equipment' },
+      { label: "Localização", value: formData.local!, emoji: 'local' },
       { label: "Tipo Manutenção", value: formData.activityType! },
       { label: "Status OM", value: formData.isFinished ? "FINALIZADA" : "EM ABERTO" },
       { label: "Turno da Equipe", value: `Turno ${formData.teamShift}` }
     ], y);
 
     y += 5;
-    y = drawSectionTitle("Logística e Segurança", y);
+    y = drawSectionTitle("Logística e Segurança", y, 'time');
     y = drawInfoGrid([
       { label: "Início Planejado", value: formData.startTime! },
       { label: "Término Real", value: formData.endTime! },
@@ -1140,10 +1169,10 @@ AUTOMAÇÃO MINA SERRA SUL
 
     if (formData.iamoDeviation) {
       y += 2;
-      doc.setFillColor(254, 242, 242); // Rose-50
+      doc.setFillColor(254, 242, 242);
       doc.roundedRect(margin, y, pageWidth - (margin * 2), 15, 1, 1, 'F');
       doc.setFontSize(7);
-      doc.setTextColor(225, 29, 72); // Rose-600
+      doc.setTextColor(225, 29, 72);
       doc.text("DESCRIÇÃO DO DESVIO IAMO", margin + 3, y + 5);
       doc.setFontSize(9);
       doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
@@ -1153,7 +1182,7 @@ AUTOMAÇÃO MINA SERRA SUL
       y += 5;
     }
 
-    y = drawSectionTitle("Descrição Técnica (Escopo)", y);
+    y = drawSectionTitle("Escopo da Ordem de Manutenção", y);
     doc.setFontSize(9);
     doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
     doc.setFont("helvetica", "normal");
@@ -1161,26 +1190,29 @@ AUTOMAÇÃO MINA SERRA SUL
     doc.text(omDescLines, margin + 5, y);
     y += (omDescLines.length * 5) + 10;
 
-    // Quebra de página se necessário
-    if (y > 220) {
-      doc.addPage();
-      addHeader();
-      y = 55;
-    }
-
-    y = drawSectionTitle("Execução Técnica Detalhada", y);
+    if (y > 220) { doc.addPage(); addHeader(); y = 55; }
+    y = drawSectionTitle("Atividades Executadas (Checklist)", y, 'check');
     doc.setFontSize(9);
     doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
-    const execLines = doc.splitTextToSize(stripSpecialChars(formData.activityExecuted!), pageWidth - (margin * 2) - 10);
-    doc.text(execLines, margin + 5, y);
-    y += (execLines.length * 5) + 12;
+    const rawExec = formData.activityExecuted || "";
+    const execLinesList = rawExec.split('\n');
+    execLinesList.forEach(line => {
+      const isCheck = line.includes('✅');
+      const cleanLine = stripSpecialChars(line);
+      const wrappedLines = doc.splitTextToSize(cleanLine, pageWidth - (margin * 2) - 15);
+      if (y > 270) { doc.addPage(); addHeader(); y = 55; }
+      if (isCheck) drawPDFEmoji('check', margin + 5, y);
+      doc.text(wrappedLines, margin + (isCheck ? 12 : 5), y);
+      y += (wrappedLines.length * 5) + 2;
+    });
 
     if (formData.hasPendencies) {
+      y += 5;
       if (y > 250) { doc.addPage(); addHeader(); y = 55; }
-      doc.setFillColor(255, 251, 235); // Amber-50
+      doc.setFillColor(255, 251, 235);
       doc.roundedRect(margin, y, pageWidth - (margin * 2), 15, 1, 1, 'F');
       doc.setFontSize(7);
-      doc.setTextColor(217, 119, 6); // Amber-600
+      doc.setTextColor(217, 119, 6);
       doc.text("PENDÊNCIAS REGISTRADAS", margin + 3, y + 5);
       doc.setFontSize(9);
       doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
@@ -1188,46 +1220,25 @@ AUTOMAÇÃO MINA SERRA SUL
       y += 20;
     }
 
+    y += 10;
     y = drawSectionTitle("Equipe Técnica", y);
     doc.setFontSize(10);
     doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
     doc.text(stripSpecialChars(formData.technicians || "-"), margin + 5, y);
-    y += 15;
 
-    // Fotos em nova página
     if (formData.photos?.length) {
-      doc.addPage();
-      addHeader();
-      y = 55;
-      y = drawSectionTitle("Evidências Fotográficas da Atividade", y);
-      
+      doc.addPage(); addHeader(); y = 55;
+      y = drawSectionTitle("Evidências Fotográficas", y);
       const imgWidth = 80;
       const imgHeight = 60;
       const gutter = 10;
-      
       formData.photos.forEach((p, i) => {
-        if (y > 220) {
-          doc.addPage();
-          addHeader();
-          y = 55;
-          y = drawSectionTitle("Evidências Fotográficas (Cont.)", y);
-        }
-        
+        if (y > 220) { doc.addPage(); addHeader(); y = 55; y = drawSectionTitle("Evidências (Cont.)", y); }
         const col = i % 2;
         const xPos = margin + (col * (imgWidth + gutter));
-        
-        // Frame da foto
         doc.setDrawColor(BORDER_COLOR[0], BORDER_COLOR[1], BORDER_COLOR[2]);
-        doc.setLineWidth(0.2);
         doc.rect(xPos, y, imgWidth, imgHeight + 12);
-        
-        try {
-          doc.addImage(p.dataUrl, 'JPEG', xPos + 1, y + 1, imgWidth - 2, imgHeight - 2, undefined, 'FAST');
-        } catch (e) {
-          doc.text("Erro ao carregar imagem", xPos + 5, y + 30);
-        }
-        
-        // Legenda
+        try { doc.addImage(p.dataUrl, 'JPEG', xPos + 1, y + 1, imgWidth - 2, imgHeight - 2, undefined, 'FAST'); } catch (e) {}
         if (p.caption) {
           doc.setFillColor(241, 245, 249);
           doc.rect(xPos, y + imgHeight, imgWidth, 12, 'F');
@@ -1236,20 +1247,15 @@ AUTOMAÇÃO MINA SERRA SUL
           const capLines = doc.splitTextToSize(stripSpecialChars(p.caption), imgWidth - 4);
           doc.text(capLines, xPos + 2, y + imgHeight + 4.5);
         }
-        
-        if (col === 1 || i === formData.photos!.length - 1) {
-          y += imgHeight + 20;
-        }
+        if (col === 1 || i === formData.photos!.length - 1) y += imgHeight + 20;
       });
     }
 
-    // Rodapé em todas as páginas
     const pageCount = (doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       addFooter(i, pageCount);
     }
-
     doc.save(`RELATORIO_TECNICO_OM_${formData.omNumber || 'SEM_NUMERO'}.pdf`);
   };
 
