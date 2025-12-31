@@ -213,7 +213,7 @@ const stripSpecialChars = (text: string) => {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^\x20-\x7E\s]/g, "")
-    .replace(/✅/g, "  ") // Espaço duplo para o checkmark desenhado
+    .replace(/✅/g, "  ") // Espaço duplo para o checkmark desenhado no PDF
     .replace(/🛑/g, "[!] ")
     .replace(/🗓️/g, "")
     .replace(/🚜/g, "")
@@ -403,12 +403,13 @@ const CompactInput: React.FC<{
   value: string;
   onChange: (val: string) => void;
   type?: string;
+  inputMode?: "search" | "text" | "none" | "tel" | "url" | "email" | "numeric" | "decimal";
   placeholder?: string;
   required?: boolean;
   error?: boolean;
   icon?: React.ReactNode;
   disabled?: boolean;
-}> = ({ label, value, onChange, type = 'text', placeholder, required, error, icon, disabled }) => (
+}> = ({ label, value, onChange, type = 'text', inputMode, placeholder, required, error, icon, disabled }) => (
   <div className={`flex flex-col gap-1 w-full ${disabled ? 'opacity-60' : ''}`}>
     <label className="text-[10px] sm:text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1 flex items-center gap-1">
       {label} {required && !disabled && <span className="text-rose-600">*</span>}
@@ -417,6 +418,7 @@ const CompactInput: React.FC<{
       {icon && <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 scale-[0.8]">{icon}</div>}
       <input
         type={type}
+        inputMode={inputMode}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
@@ -846,7 +848,9 @@ const HomePage = () => {
                 <span className="flex items-center gap-1.5"><Calendar className="w-3 h-3 text-blue-500" /> {new Date(report.date).toLocaleDateString('pt-BR')}</span>
                 <span className="flex items-center gap-1.5"><Briefcase className="w-3 h-3 text-blue-500" /> {report.activityType}</span>
               </div>
-              <button onClick={(e) => handleDelete(e, report.id)} className="absolute top-4 right-3 text-slate-300 dark:text-slate-600 hover:text-rose-600 transition-colors p-1"><Trash2 className="w-5 h-5" /></button>
+              {!report.id.startsWith('seed-') && (
+                <button onClick={(e) => handleDelete(e, report.id)} className="absolute top-4 right-3 text-slate-300 dark:text-slate-600 hover:text-rose-600 transition-colors p-1"><Trash2 className="w-5 h-5" /></button>
+              )}
             </div>
           ))}
           {filteredReports.length === 0 && (
@@ -1028,16 +1032,15 @@ AUTOMAÇÃO MINA SERRA SUL
 
   const generatePDF = () => {
     const doc = new jsPDF();
-    const margin = 15; // Margem mais compacta
+    const margin = 15;
     const pageWidth = 210;
     let y = 0;
 
-    // Cores Profissionais
-    const BLUE_PRIMARY = [37, 99, 235]; // #2563eb
-    const SLATE_DARK = [30, 41, 59];    // #1e293b
-    const SLATE_LIGHT = [100, 116, 139]; // #64748b
-    const BG_SECTION = [248, 250, 252]; // #f8fafc
-    const BORDER_COLOR = [226, 232, 240]; // #e2e8f0
+    const BLUE_PRIMARY = [37, 99, 235]; 
+    const SLATE_DARK = [30, 41, 59];    
+    const SLATE_LIGHT = [100, 116, 139]; 
+    const BG_SECTION = [248, 250, 252]; 
+    const BORDER_COLOR = [226, 232, 240]; 
 
     const addFooter = (page: number, total: number) => {
       doc.setFont("helvetica", "normal");
@@ -1046,27 +1049,13 @@ AUTOMAÇÃO MINA SERRA SUL
       doc.text(`Relatório Gerado via ReportMaster OM - Pagina ${page} de ${total}`, pageWidth / 2, 290, { align: 'center' });
     };
 
-    const drawPDFEmoji = (type: string, x: number, y: number) => {
-      doc.setLineWidth(0.1);
-      if (type === 'date') { 
-        doc.setFillColor(37, 99, 235); doc.rect(x, y - 3, 3.5, 3.5, 'F');
-        doc.setFillColor(255, 255, 255); doc.rect(x + 0.8, y - 2.2, 1.8, 1.8, 'F');
-      } else if (type === 'equipment') { 
-        doc.setFillColor(245, 158, 11); doc.rect(x, y - 3, 3.5, 2.5, 'F');
-        doc.setFillColor(30, 41, 59); doc.circle(x + 0.8, y - 0.5, 0.7, 'F'); doc.circle(x + 2.7, y - 0.5, 0.7, 'F');
-      } else if (type === 'local') { 
-        doc.setFillColor(225, 29, 72); doc.circle(x + 1.8, y - 2.5, 1.6, 'F');
-        doc.setDrawColor(225, 29, 72); doc.line(x + 1.8, y - 0.9, x + 1.8, y + 0.2);
-      } else if (type === 'om') { 
-        doc.setFillColor(79, 70, 229); doc.rect(x, y - 3.2, 4, 3.2, 'F');
-        doc.setFillColor(255, 255, 255); doc.rect(x + 0.5, y - 2.8, 1.2, 0.4, 'F');
-      } else if (type === 'check') { 
-        doc.setFillColor(16, 185, 129); doc.circle(x + 1.8, y - 1.8, 1.6, 'F');
-        doc.setDrawColor(255, 255, 255); doc.setLineWidth(0.3); doc.line(x + 1.1, y - 1.8, x + 1.6, y - 1.1); doc.line(x + 1.6, y - 1.1, x + 2.5, y - 2.5);
-      } else if (type === 'time') { 
-        doc.setFillColor(245, 158, 11); doc.circle(x + 1.8, y - 1.8, 1.8, 'F');
-        doc.setDrawColor(255, 255, 255); doc.setLineWidth(0.2); doc.line(x + 1.8, y - 1.8, x + 1.8, y - 2.8); doc.line(x + 1.8, y - 1.8, x + 2.8, y - 1.8);
-      }
+    const drawCheckmark = (x: number, y: number) => {
+      doc.setFillColor(16, 185, 129);
+      doc.circle(x + 1.8, y - 1.8, 1.6, 'F');
+      doc.setDrawColor(255, 255, 255);
+      doc.setLineWidth(0.3);
+      doc.line(x + 1.1, y - 1.8, x + 1.6, y - 1.1);
+      doc.line(x + 1.6, y - 1.1, x + 2.5, y - 2.5);
     };
 
     const addHeader = () => {
@@ -1080,7 +1069,7 @@ AUTOMAÇÃO MINA SERRA SUL
       doc.setFont("helvetica", "normal");
       doc.text("SISTEMA DE GESTÃO DE MANUTENÇÃO - UNIDADE: S11D SERRA SUL", margin, 26);
       doc.setFont("helvetica", "bold");
-      doc.text("AUTOMAÇÃO DE MINA", margin, 31);
+      doc.text("MANUTENÇÃO DE AUTOMAÇÃO DE MINA", margin, 31);
       
       doc.setFillColor(255, 255, 255);
       doc.roundedRect(150, 10, 45, 20, 1.5, 1.5, 'F');
@@ -1091,7 +1080,7 @@ AUTOMAÇÃO MINA SERRA SUL
       doc.text(stripSpecialChars(formData.omNumber || "8000XXXX"), 154, 25);
     };
 
-    const drawSectionTitle = (title: string, currentY: number, emojiType?: string) => {
+    const drawSectionTitle = (title: string, currentY: number) => {
       doc.setFillColor(BG_SECTION[0], BG_SECTION[1], BG_SECTION[2]);
       doc.rect(margin, currentY, pageWidth - (margin * 2), 8, 'F');
       doc.setDrawColor(BLUE_PRIMARY[0], BLUE_PRIMARY[1], BLUE_PRIMARY[2]);
@@ -1100,53 +1089,50 @@ AUTOMAÇÃO MINA SERRA SUL
       doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
-      const textOffset = emojiType ? 8 : 4;
-      if (emojiType) drawPDFEmoji(emojiType, margin + 2.5, currentY + 5.5);
-      doc.text(title.toUpperCase(), margin + textOffset, currentY + 5.5);
+      doc.text(title.toUpperCase(), margin + 4, currentY + 5.5);
       return currentY + 12;
     };
 
-    const drawInfoGrid = (data: {label: string, value: string, emoji?: string}[], currentY: number) => {
+    const drawInfoGrid = (data: {label: string, value: string}[], currentY: number) => {
       const colWidth = (pageWidth - (margin * 2)) / 3;
       data.forEach((item, i) => {
         const col = i % 3;
         const row = Math.floor(i / 3);
         const xPos = margin + (col * colWidth);
         const yPos = currentY + (row * 10);
-        if (item.emoji) drawPDFEmoji(item.emoji, xPos, yPos - 1);
         doc.setFontSize(6.5);
         doc.setTextColor(SLATE_LIGHT[0], SLATE_LIGHT[1], SLATE_LIGHT[2]);
         doc.setFont("helvetica", "bold");
-        doc.text(stripSpecialChars(item.label).toUpperCase(), xPos + (item.emoji ? 5 : 0), yPos);
+        doc.text(stripSpecialChars(item.label).toUpperCase(), xPos, yPos);
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8.5);
         doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
-        doc.text(stripSpecialChars(item.value || "-"), xPos + (item.emoji ? 5 : 0), yPos + 4);
+        doc.text(stripSpecialChars(item.value || "-"), xPos, yPos + 4);
       });
       return currentY + (Math.ceil(data.length / 3) * 11);
     };
 
-    // --- Primeira Página ---
+    // Primeira Página
     addHeader();
     y = 50;
-    y = drawSectionTitle("Dados Gerais da Atividade", y, 'om');
+    y = drawSectionTitle("Dados Gerais da Atividade", y);
     y = drawInfoGrid([
-      { label: "Data de Execução", value: new Date(formData.date!).toLocaleDateString('pt-BR'), emoji: 'date' },
-      { label: "Equipamento", value: formData.equipment!, emoji: 'equipment' },
-      { label: "Localização", value: formData.local!, emoji: 'local' },
-      { label: "Tipo Manutenção", value: formData.activityType! },
-      { label: "Status OM", value: formData.isFinished ? "FINALIZADA" : "EM ABERTO" },
-      { label: "Turno da Equipe", value: `Turno ${formData.teamShift}` }
+      { label: "Data de Execucao", value: new Date(formData.date!).toLocaleDateString('pt-BR') },
+      { label: "Equipamento", value: formData.equipment! },
+      { label: "Localizacao", value: formData.local! },
+      { label: "Tipo de Manutencao", value: formData.activityType!.toUpperCase() },
+      { label: "Status da Ordem", value: formData.isFinished ? "FINALIZADA" : "EM ABERTO" },
+      { label: "Turno", value: `TURNO ${formData.teamShift}` }
     ], y);
 
     y += 2;
-    y = drawSectionTitle("Logística e Segurança", y, 'time');
+    y = drawSectionTitle("Logistica e Seguranca", y);
     y = drawInfoGrid([
-      { label: "Início Planejado", value: formData.startTime! },
-      { label: "Término Real", value: formData.endTime! },
-      { label: "Centro Trabalho", value: formData.workCenter! },
-      { label: "Desvio IAMO?", value: formData.iamoDeviation ? "SIM" : "NÃO" },
-      { label: "Possui Pendência?", value: formData.hasPendencies ? "SIM" : "NÃO" }
+      { label: "Inicio Planejado", value: formData.startTime! },
+      { label: "Termino Real", value: formData.endTime! },
+      { label: "Centro de Trabalho", value: formData.workCenter! },
+      { label: "Desvio IAMO", value: formData.iamoDeviation ? "SIM" : "NAO" },
+      { label: "Possui Pendencia", value: formData.hasPendencies ? "SIM" : "NAO" }
     ], y);
 
     if (formData.iamoDeviation) {
@@ -1155,7 +1141,7 @@ AUTOMAÇÃO MINA SERRA SUL
       doc.roundedRect(margin, y, pageWidth - (margin * 2), 12, 1, 1, 'F');
       doc.setFontSize(6.5);
       doc.setTextColor(225, 29, 72);
-      doc.text("DESCRIÇÃO DO DESVIO IAMO", margin + 3, y + 4);
+      doc.text("DETALHAMENTO DO DESVIO IAMO", margin + 3, y + 4);
       doc.setFontSize(8);
       doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
       doc.text(stripSpecialChars(formData.iamoDescription || "-"), margin + 3, y + 8);
@@ -1164,7 +1150,7 @@ AUTOMAÇÃO MINA SERRA SUL
       y += 2;
     }
 
-    y = drawSectionTitle("Escopo da Ordem de Manutenção", y);
+    y = drawSectionTitle("Escopo da Manutencao", y);
     doc.setFontSize(8.5);
     doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
     doc.setFont("helvetica", "normal");
@@ -1172,9 +1158,8 @@ AUTOMAÇÃO MINA SERRA SUL
     doc.text(omDescLines, margin + 4, y);
     y += (omDescLines.length * 4.5) + 6;
 
-    // Seção de Atividades (Checklist)
     if (y > 240) { doc.addPage(); y = 20; }
-    y = drawSectionTitle("Atividades Executadas (Checklist)", y, 'check');
+    y = drawSectionTitle("Atividades Executadas", y);
     doc.setFontSize(8.5);
     doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
     const rawExec = formData.activityExecuted || "";
@@ -1184,7 +1169,7 @@ AUTOMAÇÃO MINA SERRA SUL
       const cleanLine = stripSpecialChars(line);
       const wrappedLines = doc.splitTextToSize(cleanLine, pageWidth - (margin * 2) - 12);
       if (y > 275) { doc.addPage(); y = 20; }
-      if (isCheck) drawPDFEmoji('check', margin + 3, y + 1.2);
+      if (isCheck) drawCheckmark(margin + 3, y + 1.2);
       doc.text(wrappedLines, margin + (isCheck ? 9 : 4), y + 1.2);
       y += (wrappedLines.length * 4.5) + 1.5;
     });
@@ -1196,7 +1181,7 @@ AUTOMAÇÃO MINA SERRA SUL
       doc.roundedRect(margin, y, pageWidth - (margin * 2), 12, 1, 1, 'F');
       doc.setFontSize(6.5);
       doc.setTextColor(217, 119, 6);
-      doc.text("PENDÊNCIAS REGISTRADAS", margin + 3, y + 4);
+      doc.text("PENDENCIAS REGISTRADAS", margin + 3, y + 4);
       doc.setFontSize(8);
       doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
       doc.text(stripSpecialChars(formData.pendencyDescription || "-"), margin + 3, y + 8);
@@ -1205,22 +1190,21 @@ AUTOMAÇÃO MINA SERRA SUL
 
     y += 4;
     if (y > 270) { doc.addPage(); y = 20; }
-    y = drawSectionTitle("Equipe Técnica", y);
+    y = drawSectionTitle("Equipe Tecnica", y);
     doc.setFontSize(9);
     doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
     doc.text(stripSpecialChars(formData.technicians || "-"), margin + 4, y);
     y += 10;
 
-    // Seção de Fotos (Sempre em nova página para organização se houver muitas)
     if (formData.photos?.length) {
       doc.addPage(); 
       y = 20;
-      y = drawSectionTitle("Evidências Fotográficas", y);
+      y = drawSectionTitle("Evidencias Fotograficas", y);
       const imgWidth = 85;
       const imgHeight = 65;
       const gutter = 10;
       formData.photos.forEach((p, i) => {
-        if (y > 220) { doc.addPage(); y = 20; y = drawSectionTitle("Evidências (Cont.)", y); }
+        if (y > 220) { doc.addPage(); y = 20; y = drawSectionTitle("Evidencias (Cont.)", y); }
         const col = i % 2;
         const xPos = margin + (col * (imgWidth + gutter));
         doc.setDrawColor(BORDER_COLOR[0], BORDER_COLOR[1], BORDER_COLOR[2]);
@@ -1244,7 +1228,7 @@ AUTOMAÇÃO MINA SERRA SUL
       doc.setPage(i);
       addFooter(i, pageCount);
     }
-    doc.save(`OM_${formData.omNumber || 'RELATORIO'}_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`Relatorio_OM_${formData.omNumber || '0000'}_${formData.equipment || 'Equip'}.pdf`);
   };
 
   return (
@@ -1307,7 +1291,7 @@ AUTOMAÇÃO MINA SERRA SUL
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <CompactInput label="📂 N° OM" value={formData.omNumber!} onChange={v => setFormData(p => ({...p, omNumber: v}))} required placeholder="Número OM" disabled={isNew} icon={<Hash className="w-4 h-4" />} />
+              <CompactInput label="📂 N° OM" type="tel" inputMode="numeric" value={formData.omNumber!} onChange={v => setFormData(p => ({...p, omNumber: v}))} required placeholder="Número OM" disabled={isNew} icon={<Hash className="w-4 h-4" />} />
 
               <div className={`flex flex-col gap-1 ${isNew ? 'opacity-60' : ''}`}>
                 <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🛠️ Tipo</label>
