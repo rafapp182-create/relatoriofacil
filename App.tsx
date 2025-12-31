@@ -40,10 +40,11 @@ import {
   LogOut,
   ArrowLeft,
   Truck,
-  Wrench
+  Wrench,
+  Search
 } from 'lucide-react';
 import { storage } from './services/storage';
-import { Report, Shift, ReportType, ReportPhoto, WorkCenter, UserSession, User, ReportCategory } from './types';
+import { Report, Shift, ReportType, ReportPhoto, WorkCenter, UserSession, User, ReportCategory, ActivityType } from './types';
 import { SHIFTS, WORK_CENTERS, TECHNICIANS_BY_SHIFT } from './constants';
 import { jsPDF } from 'jspdf';
 
@@ -681,6 +682,7 @@ const HomePage = () => {
   const [activeTab, setActiveTab] = useState<ReportType>('template');
   const [activeCategory, setActiveCategory] = useState<ReportCategory>('fixos');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Modelos de Início de Turno Editáveis
   const [shiftTemplates, setShiftTemplates] = useState<Record<string, string>>(DEFAULT_SHIFT_TEMPLATES);
@@ -728,7 +730,17 @@ const HomePage = () => {
     }
   };
 
-  const filteredReports = reports.filter(r => r.type === activeTab && (r.category === activeCategory || !r.category));
+  const filteredReports = reports.filter(r => {
+    const matchesTab = r.type === activeTab;
+    const matchesCategory = r.category === activeCategory || !r.category;
+    const lowerSearch = searchTerm.toLowerCase();
+    const matchesSearch = 
+      r.omDescription.toLowerCase().includes(lowerSearch) || 
+      r.omNumber.toLowerCase().includes(lowerSearch) ||
+      r.equipment.toLowerCase().includes(lowerSearch);
+    
+    return matchesTab && matchesCategory && matchesSearch;
+  });
 
   return (
     <div className="flex flex-col gap-4 sm:gap-5 p-4 sm:p-5 max-w-2xl mx-auto w-full pb-24">
@@ -748,6 +760,28 @@ const HomePage = () => {
           </div>
         </div>
       </header>
+
+      {/* Barra de Busca */}
+      <div className="relative group">
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
+          <Search className="w-5 h-5" />
+        </div>
+        <input 
+          type="text"
+          placeholder={`Buscar em ${activeTab === 'template' ? 'modelos' : 'relatórios'}...`}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white dark:bg-dark-card border border-slate-200 dark:border-dark-border text-sm font-bold dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm"
+        />
+        {searchTerm && (
+          <button 
+            onClick={() => setSearchTerm('')}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
 
       {/* Abas de Categoria (FIXOS / MÓVEIS) */}
       <div className="flex gap-2 p-1 bg-slate-100 dark:bg-dark-card rounded-2xl shadow-inner">
@@ -855,7 +889,7 @@ const HomePage = () => {
           ))}
           {filteredReports.length === 0 && (
              <div className="py-12 text-center text-slate-400 dark:text-slate-500 text-xs font-bold border-2 border-dashed border-slate-200 dark:border-dark-border rounded-3xl opacity-60">
-               Nenhum item encontrado na categoria {activeCategory}.
+               {searchTerm ? 'Nenhum resultado para a busca.' : `Nenhum item encontrado na categoria ${activeCategory}.`}
              </div>
           )}
         </div>
@@ -864,652 +898,281 @@ const HomePage = () => {
   );
 };
 
+// --- Report Form Page ---
 const ReportFormPage = () => {
-  const navigate = useNavigate();
   const { id } = useParams();
+  const navigate = useNavigate();
   const location = useLocation();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
-  const autoSaveTimerRef = useRef<number | null>(null);
+  const { user } = useTheme();
   
-  const [isNew, setIsNew] = useState(!id);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [editingPhoto, setEditingPhoto] = useState<ReportPhoto | null>(null);
-  const [customTechnician, setCustomTechnician] = useState('');
-  
-  const [formData, setFormData] = useState<Partial<Report>>({
-    id: crypto.randomUUID(), 
-    type: (location.state as any)?.type || 'template', 
-    category: (location.state as any)?.category || 'fixos',
-    omDescription: '', 
-    activityExecuted: '', 
-    date: new Date().toISOString().split('T')[0], 
-    omNumber: '', 
-    equipment: '', 
-    local: '', 
-    activityType: 'preventiva', 
-    startTime: '08:00', 
-    endTime: '17:00', 
-    iamoDeviation: false, 
-    iamoDescription: '', 
-    isFinished: true, 
-    hasPendencies: false, 
-    pendencyDescription: '', 
-    teamShift: 'A', 
-    workCenter: 'SC108HH', 
-    technicians: '', 
-    photos: []
+  const [report, setReport] = useState<Partial<Report>>({
+    id: crypto.randomUUID(),
+    type: 'report',
+    category: 'fixos',
+    date: new Date().toISOString().split('T')[0],
+    startTime: '08:00',
+    endTime: '17:00',
+    activityType: 'preventiva',
+    iamoDeviation: false,
+    hasPendencies: false,
+    isFinished: true,
+    photos: [],
+    teamShift: 'A',
+    workCenter: 'SC108HH',
+    technicians: user?.username || ''
   });
+
+  const [isEditingPhoto, setIsEditingPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
       const existing = storage.getReports().find(r => r.id === id);
       if (existing) {
-        setFormData({ ...existing });
-        setIsNew(false);
+        setReport(existing);
       }
+    } else if (location.state) {
+      const state = location.state as { type?: ReportType, category?: ReportCategory };
+      if (state.type) setReport(prev => ({ ...prev, type: state.type }));
+      if (state.category) setReport(prev => ({ ...prev, category: state.category }));
     }
-  }, [id]);
+  }, [id, location.state]);
 
-  useEffect(() => {
-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    const shouldAutoSave = formData.type === 'report' || (formData.type === 'template' && (formData.omDescription || formData.activityExecuted));
-    if (shouldAutoSave) {
-      autoSaveTimerRef.current = window.setTimeout(() => {
-        storage.saveReport({ ...formData, updatedAt: Date.now() } as Report);
-      }, 1000);
-    }
-    return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
-  }, [formData]);
-
-  const validate = (): string[] => {
-    if (isNew) {
-      const errs: string[] = [];
-      if (!formData.omDescription) errs.push("Descrição da OM");
-      if (!formData.activityExecuted) errs.push("Atividades executada");
-      return errs;
-    }
-
-    const fields = [
-      { key: 'date', label: 'Data' }, 
-      { key: 'equipment', label: 'Equipamento' }, 
-      { key: 'local', label: 'Local' }, 
-      { key: 'omNumber', label: 'N° OM' }, 
-      { key: 'startTime', label: 'Horário Inicial' }, 
-      { key: 'endTime', label: 'Horário Final' }, 
-      { key: 'omDescription', label: 'Descrição da OM' }, 
-      { key: 'activityExecuted', label: 'Atividades executada' }, 
-      { key: 'technicians', label: 'Técnicos' }
-    ];
-    const errs = fields.filter(f => !formData[f.key as keyof Report]).map(f => f.label);
-    if (formData.iamoDeviation && !formData.iamoDescription) errs.push("Explicação IAMO");
-    if (formData.hasPendencies && !formData.pendencyDescription) errs.push("Detalhes Pendência");
-    return errs;
-  };
-
-  const handleAction = (saveType: 'template' | 'report') => {
-    const errs = validate();
-    if (errs.length > 0) {
-      setValidationErrors(errs);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!report.omDescription || !report.omNumber) {
+      alert("Preencha a descrição e o número da OM");
       return;
     }
-    
-    if (saveType === 'report' && formData.type === 'template') {
-      const templateToUpdate = { ...formData, type: 'template', updatedAt: Date.now() } as Report;
-      storage.saveReport(templateToUpdate);
-      const newReportEntry = { ...formData, id: crypto.randomUUID(), type: 'report', date: new Date().toISOString().split('T')[0], updatedAt: Date.now(), createdAt: Date.now() } as Report;
-      storage.saveReport(newReportEntry);
-      navigate(`/edit/${newReportEntry.id}`, { replace: true });
-    } else {
-      const finalReport = { ...formData, type: saveType, updatedAt: Date.now() } as Report;
-      storage.saveReport(finalReport);
-      navigate('/', { state: { tab: saveType, category: formData.category } });
-    }
+    storage.saveReport(report as Report);
+    navigate('/', { state: { tab: report.type, category: report.category } });
   };
 
-  const toggleTechnician = (name: string) => {
-    const currentList = formData.technicians ? formData.technicians.split(', ').filter(n => n) : [];
-    let newList: string[] = currentList.includes(name) ? currentList.filter(n => n !== name) : [...currentList, name];
-    setFormData(prev => ({ ...prev, technicians: newList.join(', ') }));
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const dataUrl = event.target?.result as string;
+        const newPhoto: ReportPhoto = {
+          id: crypto.randomUUID(),
+          dataUrl,
+          timestamp: Date.now()
+        };
+        setReport(prev => ({
+          ...prev,
+          photos: [...(prev.photos || []), newPhoto]
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
-  const addCustomTechnician = () => {
-    if (!customTechnician.trim()) return;
-    const name = customTechnician.trim();
-    const currentList = formData.technicians ? formData.technicians.split(', ').filter(n => n) : [];
-    if (!currentList.includes(name)) {
-      setFormData(prev => ({ ...prev, technicians: [...currentList, name].join(', ') }));
-    }
-    setCustomTechnician('');
-  };
-
-  const updatePhotoCaption = (photoId: string, caption: string) => {
-    setFormData(prev => ({
+  const updatePhoto = (photoId: string, newDataUrl: string) => {
+    setReport(prev => ({
       ...prev,
-      photos: prev.photos?.map(p => p.id === photoId ? { ...p, caption } : p)
+      photos: (prev.photos || []).map(p => p.id === photoId ? { ...p, dataUrl: newDataUrl } : p)
+    }));
+    setIsEditingPhoto(null);
+  };
+
+  const deletePhoto = (photoId: string) => {
+    setReport(prev => ({
+      ...prev,
+      photos: (prev.photos || []).filter(p => p.id !== photoId)
     }));
   };
 
-  const saveMarkedPhoto = (newDataUrl: string) => {
-    if (editingPhoto) {
-      setFormData(prev => ({
-        ...prev,
-        photos: prev.photos?.map(p => p.id === editingPhoto.id ? { ...p, dataUrl: newDataUrl } : p)
-      }));
-      setEditingPhoto(null);
-    }
-  };
-
-  const shareViaWhatsApp = () => {
-    const message = `RELATÓRIO DE EXECUÇÃO
-AUTOMAÇÃO MINA SERRA SUL
-
-🗓️ Data: ${formData.date ? new Date(formData.date).toLocaleDateString('pt-BR') : ''}
-🚜 Equipamento: ${formData.equipment || ''}
-📌 Local: ${formData.local || ''}
-
-📂 N° OM: ${formData.omNumber || ''}
-
-🛠️ Tipo de Atividade: ${formData.activityType?.toUpperCase() || ''}
-
-⏰ Horário Inicial: ${formData.startTime || ''}
-⏰ Horario final: ${formData.endTime || ''}
-🛑 Desvio IAMO: ${formData.iamoDeviation ? 'SIM (' + (formData.iamoDescription || '') + ')' : 'NÃO'}
-
-♻️ Descrição da OM: ${formData.omDescription || ''}
-
-📈 Atividades executada: ${formData.activityExecuted || ''}
-
-🎯 OM finalizada: ${formData.isFinished ? 'SIM' : 'NÃO'}
-🔔 Pendências: ${formData.hasPendencies ? 'SIM (' + (formData.pendencyDescription || '') + ')' : 'NÃO'}
-📈 Equipe turno: ${formData.teamShift || ''}
-🔖 Centro de Trabalho: ${formData.workCenter || ''}
-👥 Técnicos: ${formData.technicians || ''}`;
-
-    sendToWhatsApp(message);
-  };
-
-  const generatePDF = () => {
-    const doc = new jsPDF();
-    const margin = 15;
-    const pageWidth = 210;
-    let y = 0;
-
-    const BLUE_PRIMARY = [37, 99, 235]; 
-    const SLATE_DARK = [30, 41, 59];    
-    const SLATE_LIGHT = [100, 116, 139]; 
-    const BG_SECTION = [248, 250, 252]; 
-    const BORDER_COLOR = [226, 232, 240]; 
-
-    const addFooter = (page: number, total: number) => {
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(7);
-      doc.setTextColor(148, 163, 184);
-      doc.text(`Relatório Gerado via ReportMaster OM - Pagina ${page} de ${total}`, pageWidth / 2, 290, { align: 'center' });
-    };
-
-    const drawCheckmark = (x: number, y: number) => {
-      doc.setFillColor(16, 185, 129);
-      doc.circle(x + 1.8, y - 1.8, 1.6, 'F');
-      doc.setDrawColor(255, 255, 255);
-      doc.setLineWidth(0.3);
-      doc.line(x + 1.1, y - 1.8, x + 1.6, y - 1.1);
-      doc.line(x + 1.6, y - 1.1, x + 2.5, y - 2.5);
-    };
-
-    const addHeader = () => {
-      doc.setFillColor(BLUE_PRIMARY[0], BLUE_PRIMARY[1], BLUE_PRIMARY[2]);
-      doc.rect(0, 0, pageWidth, 40, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(18);
-      doc.text("RELATÓRIO DE EXECUÇÃO", margin, 20);
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
-      doc.text("SISTEMA DE GESTÃO DE MANUTENÇÃO - UNIDADE: S11D SERRA SUL", margin, 26);
-      doc.setFont("helvetica", "bold");
-      doc.text("MANUTENÇÃO DE AUTOMAÇÃO DE MINA", margin, 31);
-      
-      doc.setFillColor(255, 255, 255);
-      doc.roundedRect(150, 10, 45, 20, 1.5, 1.5, 'F');
-      doc.setTextColor(BLUE_PRIMARY[0], BLUE_PRIMARY[1], BLUE_PRIMARY[2]);
-      doc.setFontSize(7);
-      doc.text("ORDEM DE MANUTENÇÃO", 154, 16);
-      doc.setFontSize(12);
-      doc.text(stripSpecialChars(formData.omNumber || "8000XXXX"), 154, 25);
-    };
-
-    const drawSectionTitle = (title: string, currentY: number) => {
-      doc.setFillColor(BG_SECTION[0], BG_SECTION[1], BG_SECTION[2]);
-      doc.rect(margin, currentY, pageWidth - (margin * 2), 8, 'F');
-      doc.setDrawColor(BLUE_PRIMARY[0], BLUE_PRIMARY[1], BLUE_PRIMARY[2]);
-      doc.setLineWidth(0.5);
-      doc.line(margin, currentY, margin, currentY + 8);
-      doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
-      doc.text(title.toUpperCase(), margin + 4, currentY + 5.5);
-      return currentY + 12;
-    };
-
-    const drawInfoGrid = (data: {label: string, value: string}[], currentY: number) => {
-      const colWidth = (pageWidth - (margin * 2)) / 3;
-      data.forEach((item, i) => {
-        const col = i % 3;
-        const row = Math.floor(i / 3);
-        const xPos = margin + (col * colWidth);
-        const yPos = currentY + (row * 10);
-        doc.setFontSize(6.5);
-        doc.setTextColor(SLATE_LIGHT[0], SLATE_LIGHT[1], SLATE_LIGHT[2]);
-        doc.setFont("helvetica", "bold");
-        doc.text(stripSpecialChars(item.label).toUpperCase(), xPos, yPos);
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(8.5);
-        doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
-        doc.text(stripSpecialChars(item.value || "-"), xPos, yPos + 4);
-      });
-      return currentY + (Math.ceil(data.length / 3) * 11);
-    };
-
-    // Primeira Página
-    addHeader();
-    y = 50;
-    y = drawSectionTitle("Dados Gerais da Atividade", y);
-    y = drawInfoGrid([
-      { label: "Data de Execucao", value: new Date(formData.date!).toLocaleDateString('pt-BR') },
-      { label: "Equipamento", value: formData.equipment! },
-      { label: "Localizacao", value: formData.local! },
-      { label: "Tipo de Manutencao", value: formData.activityType!.toUpperCase() },
-      { label: "Status da Ordem", value: formData.isFinished ? "FINALIZADA" : "EM ABERTO" },
-      { label: "Turno", value: `TURNO ${formData.teamShift}` }
-    ], y);
-
-    y += 2;
-    y = drawSectionTitle("Logistica e Seguranca", y);
-    y = drawInfoGrid([
-      { label: "Inicio Planejado", value: formData.startTime! },
-      { label: "Termino Real", value: formData.endTime! },
-      { label: "Centro de Trabalho", value: formData.workCenter! },
-      { label: "Desvio IAMO", value: formData.iamoDeviation ? "SIM" : "NAO" },
-      { label: "Possui Pendencia", value: formData.hasPendencies ? "SIM" : "NAO" }
-    ], y);
-
-    if (formData.iamoDeviation) {
-      y += 1;
-      doc.setFillColor(254, 242, 242);
-      doc.roundedRect(margin, y, pageWidth - (margin * 2), 12, 1, 1, 'F');
-      doc.setFontSize(6.5);
-      doc.setTextColor(225, 29, 72);
-      doc.text("DETALHAMENTO DO DESVIO IAMO", margin + 3, y + 4);
-      doc.setFontSize(8);
-      doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
-      doc.text(stripSpecialChars(formData.iamoDescription || "-"), margin + 3, y + 8);
-      y += 15;
-    } else {
-      y += 2;
-    }
-
-    y = drawSectionTitle("Escopo da Manutencao", y);
-    doc.setFontSize(8.5);
-    doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
-    doc.setFont("helvetica", "normal");
-    const omDescLines = doc.splitTextToSize(stripSpecialChars(formData.omDescription!), pageWidth - (margin * 2) - 8);
-    doc.text(omDescLines, margin + 4, y);
-    y += (omDescLines.length * 4.5) + 6;
-
-    if (y > 240) { doc.addPage(); y = 20; }
-    y = drawSectionTitle("Atividades Executadas", y);
-    doc.setFontSize(8.5);
-    doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
-    const rawExec = formData.activityExecuted || "";
-    const execLinesList = rawExec.split('\n');
-    execLinesList.forEach(line => {
-      const isCheck = line.includes('✅');
-      const cleanLine = stripSpecialChars(line);
-      const wrappedLines = doc.splitTextToSize(cleanLine, pageWidth - (margin * 2) - 12);
-      if (y > 275) { doc.addPage(); y = 20; }
-      if (isCheck) drawCheckmark(margin + 3, y + 1.2);
-      doc.text(wrappedLines, margin + (isCheck ? 9 : 4), y + 1.2);
-      y += (wrappedLines.length * 4.5) + 1.5;
-    });
-
-    if (formData.hasPendencies) {
-      y += 3;
-      if (y > 260) { doc.addPage(); y = 20; }
-      doc.setFillColor(255, 251, 235);
-      doc.roundedRect(margin, y, pageWidth - (margin * 2), 12, 1, 1, 'F');
-      doc.setFontSize(6.5);
-      doc.setTextColor(217, 119, 6);
-      doc.text("PENDENCIAS REGISTRADAS", margin + 3, y + 4);
-      doc.setFontSize(8);
-      doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
-      doc.text(stripSpecialChars(formData.pendencyDescription || "-"), margin + 3, y + 8);
-      y += 15;
-    }
-
-    y += 4;
-    if (y > 270) { doc.addPage(); y = 20; }
-    y = drawSectionTitle("Equipe Tecnica", y);
-    doc.setFontSize(9);
-    doc.setTextColor(SLATE_DARK[0], SLATE_DARK[1], SLATE_DARK[2]);
-    doc.text(stripSpecialChars(formData.technicians || "-"), margin + 4, y);
-    y += 10;
-
-    if (formData.photos?.length) {
-      doc.addPage(); 
-      y = 20;
-      y = drawSectionTitle("Evidencias Fotograficas", y);
-      const imgWidth = 85;
-      const imgHeight = 65;
-      const gutter = 10;
-      formData.photos.forEach((p, i) => {
-        if (y > 220) { doc.addPage(); y = 20; y = drawSectionTitle("Evidencias (Cont.)", y); }
-        const col = i % 2;
-        const xPos = margin + (col * (imgWidth + gutter));
-        doc.setDrawColor(BORDER_COLOR[0], BORDER_COLOR[1], BORDER_COLOR[2]);
-        doc.setLineWidth(0.1);
-        doc.rect(xPos, y, imgWidth, imgHeight + 10);
-        try { doc.addImage(p.dataUrl, 'JPEG', xPos + 0.5, y + 0.5, imgWidth - 1, imgHeight - 1, undefined, 'FAST'); } catch (e) {}
-        if (p.caption) {
-          doc.setFillColor(241, 245, 249);
-          doc.rect(xPos, y + imgHeight, imgWidth, 10, 'F');
-          doc.setFontSize(6.5);
-          doc.setTextColor(SLATE_LIGHT[0], SLATE_LIGHT[1], SLATE_LIGHT[2]);
-          const capLines = doc.splitTextToSize(stripSpecialChars(p.caption), imgWidth - 4);
-          doc.text(capLines, xPos + 2, y + imgHeight + 4.5);
-        }
-        if (col === 1 || i === formData.photos!.length - 1) y += imgHeight + 15;
-      });
-    }
-
-    const pageCount = (doc as any).internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      addFooter(i, pageCount);
-    }
-    doc.save(`Relatorio_OM_${formData.omNumber || '0000'}_${formData.equipment || 'Equip'}.pdf`);
-  };
-
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-dark-bg pb-28 text-slate-800 dark:text-white transition-colors">
-      <nav className="sticky top-0 z-30 bg-white/90 dark:bg-dark-card/90 backdrop-blur-md border-b dark:border-dark-border px-4 py-3 flex items-center gap-3 shadow-md">
-        <button onClick={() => navigate('/')} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-dark-bg transition-colors"><ChevronLeft className="dark:text-white w-6 h-6" /></button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-[9px] font-black uppercase tracking-widest text-blue-600 truncate">RELATÓRIO DE EXECUÇÃO</h1>
-          <p className="font-extrabold text-sm leading-none text-slate-800 dark:text-white truncate">S11D SERRA SUL</p>
+    <div className="flex flex-col gap-5 p-4 sm:p-6 max-w-2xl mx-auto w-full pb-24">
+      <header className="flex items-center gap-4">
+        <button onClick={() => navigate(-1)} className="p-2.5 bg-white dark:bg-dark-card border dark:border-dark-border rounded-xl text-slate-700 dark:text-slate-300">
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+        <div>
+          <h1 className="text-xl font-black dark:text-white">
+            {id ? 'Editar' : 'Novo'} {report.type === 'template' ? 'Modelo' : 'Relatório'}
+          </h1>
+          <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">
+            Categoria: {report.category === 'fixos' ? 'Fixos' : 'Móveis'}
+          </span>
         </div>
-      </nav>
+      </header>
 
-      {editingPhoto && <ImageEditor photo={editingPhoto} onSave={saveMarkedPhoto} onCancel={() => setEditingPhoto(null)} />}
-
-      <div className="p-4 max-w-2xl mx-auto flex flex-col gap-4">
-        {isNew && (
-          <div className="bg-white dark:bg-dark-card border-2 border-blue-500/20 p-4 rounded-3xl flex items-center gap-4 shadow-sm">
-             <div className="bg-blue-500/10 p-3 rounded-2xl"><ClipboardList className="w-6 h-6 text-blue-600" /></div>
-             <div className="flex flex-col">
-                <span className="font-black text-xs uppercase text-blue-700 dark:text-blue-400">Novo Modelo: {formData.category?.toUpperCase()}</span>
-                <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Preencha o escopo da atividade base.</p>
+      <form onSubmit={handleSave} className="space-y-6">
+        <div className="bg-white dark:bg-dark-card p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-dark-border space-y-5">
+           <div className="grid grid-cols-2 gap-4">
+              <CompactInput label="Data" type="date" value={report.date || ''} onChange={v => setReport(p => ({...p, date: v}))} required />
+              <CompactInput label="Número OM" value={report.omNumber || ''} onChange={v => setReport(p => ({...p, omNumber: v}))} required placeholder="Ex: 30012345" />
+           </div>
+           
+           <CompactInput label="Equipamento" value={report.equipment || ''} onChange={v => setReport(p => ({...p, equipment: v}))} placeholder="Ex: CAT 793F / SW0663" />
+           <CompactInput label="Local / TAG" value={report.local || ''} onChange={v => setReport(p => ({...p, local: v}))} placeholder="Ex: Baia 05 / Overland" />
+           
+           <CompactTextArea label="Descrição da OM" value={report.omDescription || ''} onChange={v => setReport(p => ({...p, omDescription: v}))} required placeholder="O que consta na ordem de manutenção..." />
+           
+           <div className="grid grid-cols-2 gap-4">
+             <div className="flex flex-col gap-1">
+               <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">Turno</label>
+               <select value={report.teamShift} onChange={e => setReport(p => ({...p, teamShift: e.target.value as Shift}))} className="w-full px-3 py-3 rounded-xl border border-slate-300 dark:border-dark-border bg-white dark:bg-dark-card text-sm font-semibold dark:text-white">
+                 {SHIFTS.map(s => <option key={s} value={s}>Turno {s}</option>)}
+               </select>
              </div>
-          </div>
-        )}
-
-        {validationErrors.length > 0 && (
-          <div className="bg-rose-50 dark:bg-rose-900/10 border-2 border-rose-500/20 p-4 rounded-3xl animate-in slide-in-from-top duration-300">
-            <div className="flex items-center gap-2.5 mb-2.5">
-              <AlertTriangle className="w-4 h-4 text-rose-600" />
-              <span className="font-black text-[11px] uppercase dark:text-white">Campos Pendentes</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {validationErrors.map((e, i) => <span key={i} className="px-3 py-1 bg-white dark:bg-dark-bg rounded-lg text-[10px] font-black text-rose-600 uppercase border border-rose-100">{e}</span>)}
-            </div>
-          </div>
-        )}
-
-        <div className="bg-white dark:bg-dark-card rounded-[2rem] border border-slate-200 dark:border-dark-border shadow-md overflow-hidden p-4 sm:p-5 space-y-6">
-          
-          {/* 1. Identificação */}
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-1 bg-blue-600 rounded-full" />
-              <h3 className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">📍 Identificação</h3>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <CompactInput label="🗓️ Data" type="date" value={formData.date!} onChange={v => setFormData(p => ({...p, date: v}))} required disabled={isNew} icon={<Calendar className="w-4 h-4" />} />
-              <CompactInput label="🚜 Equipamento" value={formData.equipment!} onChange={v => setFormData(p => ({...p, equipment: v}))} required placeholder="Ex: PC200" disabled={isNew} icon={<Zap className="w-4 h-4" />} />
-            </div>
-            
-            <CompactInput label="📌 Local" value={formData.local!} onChange={v => setFormData(p => ({...p, local: v}))} required placeholder="Qual o local da atividade?" disabled={isNew} icon={<MapPin className="w-4 h-4" />} />
-          </div>
-
-          {/* 2. Ordem de Manutenção */}
-          <div className="flex flex-col gap-4 pt-4 border-t dark:border-dark-border">
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-1 bg-indigo-600 rounded-full" />
-              <h3 className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">📂 Manutenção</h3>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <CompactInput label="📂 N° OM" type="tel" inputMode="numeric" value={formData.omNumber!} onChange={v => setFormData(p => ({...p, omNumber: v}))} required placeholder="Número OM" disabled={isNew} icon={<Hash className="w-4 h-4" />} />
-
-              <div className={`flex flex-col gap-1 ${isNew ? 'opacity-60' : ''}`}>
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🛠️ Tipo</label>
-                <select disabled={isNew} value={formData.activityType} onChange={e => setFormData(p => ({...p, activityType: e.target.value as any}))} className="w-full px-3 py-3 rounded-xl border border-slate-300 dark:border-dark-border bg-white dark:bg-dark-card dark:text-white text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-blue-100 min-h-[48px]">
-                  <option value="preventiva">Preventiva</option>
-                  <option value="corretiva">Corretiva</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* 3. Horários e IAMO */}
-          <div className="flex flex-col gap-4 pt-4 border-t dark:border-dark-border">
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-1 bg-amber-600 rounded-full" />
-              <h3 className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">⏰ Horários / IAMO</h3>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <CompactInput label="⏰ Início" type="time" value={formData.startTime!} onChange={v => setFormData(p => ({...p, startTime: v}))} required disabled={isNew} />
-              <CompactInput label="⏰ Término" type="time" value={formData.endTime!} onChange={v => setFormData(p => ({...p, endTime: v}))} required disabled={isNew} />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🛑 Desvio IAMO?</label>
-              <button disabled={isNew} onClick={() => setFormData(p => ({...p, iamoDeviation: !p.iamoDeviation}))} className={`w-full py-3.5 rounded-xl text-[11px] font-black transition-all border-2 flex items-center justify-center gap-2 min-h-[48px] ${formData.iamoDeviation ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-500 text-rose-600' : 'bg-slate-50 dark:bg-dark-bg border-slate-200 dark:border-dark-border text-slate-400'}`}>
-                {formData.iamoDeviation ? 'OCORRÊNCIA REGISTRADA' : 'SEM DESVIOS'}
-              </button>
-            </div>
-            {formData.iamoDeviation && (
-              <CompactTextArea label="🚨 Detalhes do IAMO" value={formData.iamoDescription!} onChange={v => setFormData(p => ({...p, iamoDescription: v}))} required placeholder="Explique o desvio ocorrido..." rows={2} />
-            )}
-          </div>
-
-          {/* 4. Escopo e Execução */}
-          <div className="flex flex-col gap-4 pt-4 border-t dark:border-dark-border">
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-1 bg-emerald-600 rounded-full" />
-              <h3 className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">📝 Detalhamento</h3>
-            </div>
-
-            <CompactTextArea label="♻️ Descrição da OM" value={formData.omDescription!} onChange={v => setFormData(p => ({...p, omDescription: v}))} required placeholder="Escopo planejado..." rows={3} />
-            
-            <CompactTextArea label="📈 Atividades Realizadas" value={formData.activityExecuted!} onChange={v => setFormData(p => ({...p, activityExecuted: v}))} required rows={6} placeholder="O que foi executado na prática?" />
-          </div>
-
-          {/* 5. Fechamento e Equipe */}
-          <div className={`flex flex-col gap-4 pt-4 border-t dark:border-dark-border ${isNew ? 'opacity-40 pointer-events-none' : ''}`}>
-            <div className="flex items-center gap-2">
-              <div className="h-4 w-1 bg-rose-600 rounded-full" />
-              <h3 className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">🏁 Finalização</h3>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🎯 Concluída?</label>
-                <button onClick={() => setFormData(p => ({...p, isFinished: !p.isFinished}))} className={`w-full py-3.5 rounded-xl text-[10px] sm:text-[11px] font-black transition-all border-2 min-h-[48px] ${formData.isFinished ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-500 text-emerald-600' : 'bg-amber-50 dark:bg-amber-900/10 border-amber-500 text-amber-600'}`}>
-                  {formData.isFinished ? 'CONCLUÍDA' : 'EM ANDAMENTO'}
-                </button>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🔔 Pendências?</label>
-                <button onClick={() => setFormData(p => ({...p, hasPendencies: !p.hasPendencies}))} className={`w-full py-3.5 rounded-xl text-[10px] sm:text-[11px] font-black transition-all border-2 min-h-[48px] ${formData.hasPendencies ? 'bg-rose-50 dark:bg-rose-900/20 border-rose-500 text-rose-600' : 'bg-slate-50 dark:bg-dark-bg border-slate-200 dark:border-dark-border text-slate-400'}`}>
-                  {formData.hasPendencies ? 'COM PENDÊNCIA' : 'SEM PENDÊNCIA'}
-                </button>
-              </div>
-            </div>
-            {formData.hasPendencies && (
-              <CompactTextArea label="📝 Relatório de Pendência" value={formData.pendencyDescription!} onChange={v => setFormData(p => ({...p, pendencyDescription: v}))} required placeholder="Descreva as pendências..." rows={2} />
-            )}
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">📈 Turno</label>
-                <select value={formData.teamShift} onChange={e => setFormData(p => ({...p, teamShift: e.target.value as Shift, technicians: ''}))} className="w-full px-3 py-3 rounded-xl border border-slate-300 dark:border-dark-border bg-white dark:bg-dark-card dark:text-white text-sm font-bold shadow-sm outline-none min-h-[48px]">
-                  {SHIFTS.map(s => <option key={s} value={s}>Turno {s}</option>)}
-                </select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">🔖 C. Trabalho</label>
-                <select value={formData.workCenter} onChange={e => setFormData(p => ({...p, workCenter: e.target.value as WorkCenter}))} className="w-full px-3 py-3 rounded-xl border border-slate-300 dark:border-dark-border bg-white dark:bg-dark-card dark:text-white text-sm font-bold shadow-sm outline-none min-h-[48px]">
-                  {WORK_CENTERS.map(wc => <option key={wc} value={wc}>{wc}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">👥 Equipe Envolvida</label>
-              <div className="flex flex-wrap gap-2">
-                {TECHNICIANS_BY_SHIFT[formData.teamShift! || 'A'].map(name => {
-                  const isSelected = formData.technicians?.includes(name);
-                  return (
-                    <button key={name} onClick={() => toggleTechnician(name)} className={`px-4 py-2.5 rounded-xl text-xs font-bold border-2 transition-all flex items-center gap-2 min-h-[40px] ${isSelected ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white dark:bg-dark-card border-slate-200 dark:border-dark-border text-slate-600 dark:text-slate-400 active:bg-slate-100'}`}>
-                      {isSelected && <CheckCircle2 className="w-3.5 h-3.5" />}
-                      {name}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {formData.technicians?.split(', ').filter(name => name && !TECHNICIANS_BY_SHIFT[formData.teamShift! || 'A'].includes(name)).map(name => (
-                  <button key={name} onClick={() => toggleTechnician(name)} className="px-4 py-2.5 rounded-xl text-xs font-bold border-2 transition-all flex items-center gap-2 bg-indigo-600 border-indigo-600 text-white shadow-md">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    {name}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex gap-2 items-end mt-1">
-                <div className="flex-1">
-                  <CompactInput 
-                    label="👤 Outro Técnico" 
-                    value={customTechnician} 
-                    onChange={setCustomTechnician} 
-                    placeholder="Nome..."
-                    icon={<UserPlus className="w-4 h-4" />}
-                  />
-                </div>
-                <button 
-                  onClick={addCustomTechnician} 
-                  disabled={!customTechnician.trim()}
-                  className="bg-slate-100 dark:bg-dark-bg h-[48px] w-[48px] rounded-xl text-blue-600 disabled:opacity-40 active:scale-90 transition-all border border-slate-200 dark:border-dark-border flex items-center justify-center"
-                >
-                  <Plus className="w-6 h-6" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* 6. Evidências (Fotos) */}
-          <div className={`flex flex-col gap-4 pt-4 border-t dark:border-dark-border ${isNew ? 'opacity-40 pointer-events-none' : ''}`}>
-             <div className="flex items-center gap-2">
-               <div className="h-4 w-1 bg-purple-600 rounded-full" />
-               <h3 className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">📸 Registro Fotográfico</h3>
+             <div className="flex flex-col gap-1">
+               <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">Centro Trab.</label>
+               <select value={report.workCenter} onChange={e => setReport(p => ({...p, workCenter: e.target.value as WorkCenter}))} className="w-full px-3 py-3 rounded-xl border border-slate-300 dark:border-dark-border bg-white dark:bg-dark-card text-sm font-semibold dark:text-white">
+                 {WORK_CENTERS.map(wc => <option key={wc} value={wc}>{wc}</option>)}
+               </select>
              </div>
-             <div className="grid grid-cols-2 gap-3">
-               <button onClick={() => fileInputRef.current?.click()} className="py-5 sm:py-6 border-2 border-dashed rounded-[1.5rem] border-slate-300 dark:border-dark-border text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex flex-col items-center shadow-sm active:bg-slate-100">
-                  <ImageIcon className="w-6 h-6 mb-2" />
-                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Galeria</span>
-                  <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={(e) => {
-                    if (!e.target.files) return;
-                    Array.from(e.target.files).forEach((file: File) => {
-                      const reader = new FileReader();
-                      reader.onload = (ev) => { if (typeof ev.target?.result === 'string') setFormData(prev => ({ ...prev, photos: [...(prev.photos || []), { id: crypto.randomUUID(), dataUrl: ev.target!.result as string, timestamp: Date.now() }] })); };
-                      reader.readAsDataURL(file);
-                    });
-                  }} />
-               </button>
-               <button onClick={() => cameraInputRef.current?.click()} className="py-5 sm:py-6 border-2 border-dashed rounded-[1.5rem] border-slate-300 dark:border-dark-border text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 flex flex-col items-center shadow-sm active:bg-slate-100">
-                  <Camera className="w-6 h-6 mb-2" />
-                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Câmera</span>
-                  <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => {
-                    if (!e.target.files) return;
-                    Array.from(e.target.files).forEach((file: File) => {
-                      const reader = new FileReader();
-                      reader.onload = (ev) => { if (typeof ev.target?.result === 'string') setFormData(prev => ({ ...prev, photos: [...(prev.photos || []), { id: crypto.randomUUID(), dataUrl: ev.target!.result as string, timestamp: Date.now() }] })); };
-                      reader.readAsDataURL(file);
-                    });
-                  }} />
-               </button>
-             </div>
-             <div className="space-y-4">
-               {formData.photos?.map(p => (
-                 <div key={p.id} className="bg-slate-50 dark:bg-dark-bg p-3 rounded-2xl border border-slate-200 dark:border-dark-border flex gap-3 shadow-sm">
-                   <div className="relative w-20 sm:w-24 aspect-square rounded-xl overflow-hidden bg-slate-200 flex-shrink-0 shadow-inner">
-                     <img src={p.dataUrl} className="w-full h-full object-cover" />
-                     <button onClick={() => setFormData(prev => ({...prev, photos: prev.photos?.filter(ph => ph.id !== p.id)}))} className="absolute top-1.5 right-1.5 bg-rose-600/90 text-white p-1 rounded-lg shadow-md active:scale-90 transition-all"><X className="w-4 h-4" /></button>
-                   </div>
-                   <div className="flex-1 flex flex-col gap-2 py-1 min-w-0">
-                     <div className="flex justify-between items-center gap-2">
-                       <span className="text-[9px] font-black text-slate-500 uppercase truncate">Legenda</span>
-                       <button onClick={() => setEditingPhoto(p)} className="text-blue-600 text-[9px] font-black uppercase flex items-center gap-1 active:scale-95 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-lg whitespace-nowrap">Desenhar <Edit3 className="w-3 h-3" /></button>
-                     </div>
-                     <input placeholder="Ex: Painel..." value={p.caption || ''} onChange={(e) => updatePhotoCaption(p.id, e.target.value)} className="w-full bg-white dark:bg-dark-card border border-slate-300 dark:border-dark-border rounded-xl px-3 py-2 text-xs font-semibold dark:text-white outline-none focus:ring-2 focus:ring-blue-100" />
-                   </div>
-                 </div>
+           </div>
+        </div>
+
+        <div className="bg-white dark:bg-dark-card p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-dark-border space-y-5">
+          <div className="flex items-center gap-2 mb-2">
+            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+            <h3 className="font-black text-xs uppercase tracking-widest text-slate-800 dark:text-white">Execução Técnica</h3>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+             <CompactInput label="Início" type="time" value={report.startTime || ''} onChange={v => setReport(p => ({...p, startTime: v}))} />
+             <CompactInput label="Fim" type="time" value={report.endTime || ''} onChange={v => setReport(p => ({...p, endTime: v}))} />
+          </div>
+
+          <div className="flex flex-col gap-1">
+             <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight px-1">Tipo de Atividade</label>
+             <div className="flex gap-2">
+               {['preventiva', 'corretiva'].map(t => (
+                 <button key={t} type="button" onClick={() => setReport(p => ({...p, activityType: t as ActivityType}))} className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest border transition-all ${report.activityType === t ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-slate-50 dark:bg-dark-bg text-slate-400 border-slate-200 dark:border-dark-border'}`}>
+                   {t}
+                 </button>
                ))}
              </div>
           </div>
 
-          {formData.type === 'report' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 border-t dark:border-dark-border">
-              <Button onClick={generatePDF} variant="secondary" className="h-12 text-[11px] uppercase tracking-widest sm:col-span-2 shadow-sm">
-                <Download className="w-4 h-4" /> Exportar PDF
-              </Button>
-              <Button onClick={shareViaWhatsApp} variant="success" className="h-14 text-sm uppercase font-black sm:col-span-2 shadow-emerald-100/50">
-                <MessageCircle className="w-5 h-5" /> Enviar WhatsApp
-              </Button>
-            </div>
-          )}
+          <CompactTextArea label="Atividade Executada" rows={6} value={report.activityExecuted || ''} onChange={v => setReport(p => ({...p, activityExecuted: v}))} placeholder="Descreva o passo a passo da atividade..." />
+          
+          <CompactInput label="Técnicos" value={report.technicians || ''} onChange={v => setReport(p => ({...p, technicians: v}))} placeholder="Nomes dos técnicos..." />
         </div>
-      </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 dark:bg-dark-bg/80 backdrop-blur-md border-t dark:border-dark-border flex justify-center z-40 safe-area-bottom shadow-[0_-8px_30px_rgba(0,0,0,0.08)]">
-        <div className="w-full max-w-2xl flex gap-3 pb-safe">
-          {isNew ? (
-            <Button onClick={() => handleAction('template')} className="w-full h-14 rounded-2xl shadow-lg text-base">💾 Salvar Modelo</Button>
-          ) : formData.type === 'template' ? (
-            <Button onClick={() => handleAction('report')} variant="success" className="w-full h-14 rounded-2xl shadow-lg text-base">🛠️ Utilizar Esse Modelo</Button>
-          ) : (
-            <Button onClick={() => handleAction('report')} variant="primary" className="w-full h-14 rounded-2xl shadow-lg text-base uppercase font-black">💾 SALVAR</Button>
-          )}
+        <div className="bg-white dark:bg-dark-card p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-dark-border space-y-5">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Camera className="w-5 h-5 text-blue-500" />
+              <h3 className="font-black text-xs uppercase tracking-widest text-slate-800 dark:text-white">Evidências (Fotos)</h3>
+            </div>
+            <label className="p-2.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-xl cursor-pointer active:scale-90 transition-all">
+              <Plus className="w-5 h-5" />
+              <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {report.photos?.map(photo => (
+              <div key={photo.id} className="relative aspect-square rounded-2xl overflow-hidden border dark:border-dark-border group">
+                <img src={photo.dataUrl} className="w-full h-full object-cover" alt="Evidência" />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <button type="button" onClick={() => setIsEditingPhoto(photo.id)} className="p-2 bg-white rounded-lg text-blue-600"><Edit3 className="w-4 h-4" /></button>
+                  <button type="button" onClick={() => deletePhoto(photo.id)} className="p-2 bg-white rounded-lg text-rose-600"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              </div>
+            ))}
+            {(!report.photos || report.photos.length === 0) && (
+              <div className="col-span-2 py-8 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 dark:border-dark-border rounded-2xl opacity-50">
+                <ImageIcon className="w-8 h-8 text-slate-300 mb-2" />
+                <span className="text-[10px] font-black uppercase text-slate-400">Nenhuma foto adicionada</span>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+
+        <div className="bg-white dark:bg-dark-card p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-dark-border space-y-4">
+           <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                <span className="text-xs font-black uppercase tracking-widest dark:text-white">Desvio IAM-O?</span>
+              </div>
+              <button type="button" onClick={() => setReport(p => ({...p, iamoDeviation: !p.iamoDeviation}))} className={`w-12 h-6 rounded-full transition-colors relative ${report.iamoDeviation ? 'bg-amber-500' : 'bg-slate-200 dark:bg-dark-bg'}`}>
+                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${report.iamoDeviation ? 'left-7' : 'left-1'}`} />
+              </button>
+           </div>
+           {report.iamoDeviation && (
+             <CompactTextArea label="Descrição do Desvio" value={report.iamoDescription || ''} onChange={v => setReport(p => ({...p, iamoDescription: v}))} />
+           )}
+
+           <div className="flex items-center justify-between border-t dark:border-dark-border pt-4">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="w-5 h-5 text-blue-500" />
+                <span className="text-xs font-black uppercase tracking-widest dark:text-white">Pendências?</span>
+              </div>
+              <button type="button" onClick={() => setReport(p => ({...p, hasPendencies: !p.hasPendencies}))} className={`w-12 h-6 rounded-full transition-colors relative ${report.hasPendencies ? 'bg-blue-600' : 'bg-slate-200 dark:bg-dark-bg'}`}>
+                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${report.hasPendencies ? 'left-7' : 'left-1'}`} />
+              </button>
+           </div>
+           {report.hasPendencies && (
+             <CompactTextArea label="O que ficou pendente?" value={report.pendencyDescription || ''} onChange={v => setReport(p => ({...p, pendencyDescription: v}))} />
+           )}
+        </div>
+
+        <div className="flex flex-col gap-3 pt-4">
+           <Button type="submit" className="h-14 rounded-2xl text-base shadow-xl shadow-blue-200">
+             <Save className="w-5 h-5" /> {id ? 'Atualizar' : 'Salvar'} {report.type === 'template' ? 'Modelo' : 'Relatório'}
+           </Button>
+           
+           {id && (
+             <div className="flex gap-2">
+                <Button onClick={() => {
+                  const today = new Date().toLocaleDateString('pt-BR');
+                  const msg = `📑 *RELATÓRIO DE ATIVIDADE*\n\n🛠️ *OM:* ${report.omNumber}\n📝 *DESC:* ${report.omDescription}\n📍 *EQUIP:* ${report.equipment || 'N/A'}\n📍 *LOCAL:* ${report.local || 'N/A'}\n🗓️ *DATA:* ${today}\n⏰ *HORÁRIO:* ${report.startTime} às ${report.endTime}\n✅ *EXECUTADO:*\n${report.activityExecuted}\n\n👤 *TÉCNICOS:* ${report.technicians}\n${report.iamoDeviation ? `⚠️ *IAM-O:* ${report.iamoDescription}` : ''}\n${report.hasPendencies ? `🛑 *PENDÊNCIA:* ${report.pendencyDescription}` : ''}`;
+                  sendToWhatsApp(msg);
+                }} variant="success" className="flex-1 h-12 text-xs">
+                  <MessageCircle className="w-4 h-4" /> Enviar WhatsApp
+                </Button>
+                <Button onClick={() => {
+                  const doc = new jsPDF();
+                  const cleanOm = stripSpecialChars(report.omDescription || '');
+                  doc.setFontSize(18);
+                  doc.text("RELATORIO DE ATIVIDADE", 10, 20);
+                  doc.setFontSize(10);
+                  doc.text(`OM: ${report.omNumber}`, 10, 30);
+                  doc.text(`EQUIPAMENTO: ${report.equipment || 'N/A'}`, 10, 35);
+                  doc.text(`LOCAL: ${report.local || 'N/A'}`, 10, 40);
+                  doc.text(`DATA: ${report.date}`, 10, 45);
+                  doc.text(`TÉCNICOS: ${report.technicians}`, 10, 50);
+                  doc.line(10, 55, 200, 55);
+                  doc.setFontSize(12);
+                  doc.text("ATIVIDADE EXECUTADA:", 10, 65);
+                  doc.setFontSize(10);
+                  const splitExec = doc.splitTextToSize(stripSpecialChars(report.activityExecuted || ''), 180);
+                  doc.text(splitExec, 10, 75);
+                  doc.save(`Relatorio_${report.omNumber}.pdf`);
+                }} variant="secondary" className="flex-1 h-12 text-xs">
+                  <Download className="w-4 h-4" /> Baixar PDF
+                </Button>
+             </div>
+           )}
+        </div>
+      </form>
+
+      {isEditingPhoto && (
+        <ImageEditor 
+          photo={report.photos!.find(p => p.id === isEditingPhoto)!} 
+          onSave={(data) => updatePhoto(isEditingPhoto, data)} 
+          onCancel={() => setIsEditingPhoto(null)} 
+        />
+      )}
     </div>
   );
 };
 
-// --- Main App ---
+// --- ThemeProvider & Main App Container ---
 
-const ThemeProvider = ({ children }: { children?: React.ReactNode }) => {
+const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
   const [theme, setTheme] = useState<'light' | 'dark'>(storage.getTheme());
   const [user, setUser] = useState<UserSession | null>(storage.getSession());
 
   useEffect(() => {
-    if (theme === 'dark') document.documentElement.classList.add('dark');
-    else document.documentElement.classList.remove('dark');
+    document.documentElement.classList.toggle('dark', theme === 'dark');
     storage.setTheme(theme);
   }, [theme]);
 
@@ -1517,13 +1180,13 @@ const ThemeProvider = ({ children }: { children?: React.ReactNode }) => {
 
   const login = (username: string) => {
     const session = { username, loginTime: Date.now() };
-    setUser(session);
     storage.setSession(session);
+    setUser(session);
   };
 
   const logout = () => {
-    setUser(null);
     storage.logout();
+    setUser(null);
   };
 
   return (
@@ -1536,16 +1199,17 @@ const ThemeProvider = ({ children }: { children?: React.ReactNode }) => {
 const App = () => {
   return (
     <ThemeProvider>
-      <HashRouter>
-        <div className="min-h-screen bg-slate-50 dark:bg-dark-bg flex flex-col transition-colors">
+      <div className="min-h-screen bg-slate-50 dark:bg-dark-bg transition-colors duration-300">
+        <HashRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
             <Route path="/new" element={<ProtectedRoute><ReportFormPage /></ProtectedRoute>} />
             <Route path="/edit/:id" element={<ProtectedRoute><ReportFormPage /></ProtectedRoute>} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </div>
-      </HashRouter>
+        </HashRouter>
+      </div>
     </ThemeProvider>
   );
 };
